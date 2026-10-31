@@ -1,0 +1,8 @@
+{
+  "name": "COMPETITIVE PATHSHALA",
+  "description": "কম্পিটিটিভ পাঠশালা - চাকরির প্রস্তুতির পূর্ণাঙ্গ ইনস্টিটিউট অ্যাপ। মক টেস্ট, প্রোটেক্টেড পরীক্ষা মোড, বই ও পিডিএফ লাইব্রেরি, লাইভ ক্লাস, ফি পেমেন্ট ও চ্যাটবোর্ড এক্সপ্লেনেশন।",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
