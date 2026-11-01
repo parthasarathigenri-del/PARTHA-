@@ -18,144 +18,63 @@ class JobPrepRepository {
 
     private val _currentStudent = MutableStateFlow(
         Student(
-            id = "std_101",
-            name = "সুমন ব্যানার্জী",
-            rollNo = "SA-2026-1042",
-            targetExam = "WBCS & SSC CGL",
-            phone = "+91 98301 23456",
+            id = "admin_master",
+            name = "ইনস্টিটিউট অ্যাডমিন (আপনি)",
+            rollNo = "ADM-01",
+            targetExam = "অ্যাডমিন কন্ট্রোল",
+            phone = "+91 98765 43210",
             isApproved = true,
-            activeTimeSeconds = 18450L,
-            batch = "অদম্য WBCS ব্যাচ ২০২৬"
+            isAdmin = true,
+            canAccessMockTests = true,
+            canAccessPdfs = true,
+            registrationDate = "আজ",
+            activeTimeSeconds = 0L,
+            batch = "প্রধান অ্যাডমিন প্যানেল",
+            scoresHistory = emptyList()
         )
     )
     val currentStudent: StateFlow<Student> = _currentStudent.asStateFlow()
 
-    // Institute registered students list for Admin & peer visibility
-    private val _allStudents = MutableStateFlow(
+    // Institute registered students list for Admin
+    private val _allStudents = MutableStateFlow<List<Student>>(
         listOf(
-            Student("std_101", "সুমন ব্যানার্জী", "SA-1042", "WBCS & SSC", "+91 98301 23456", isApproved = true, activeTimeSeconds = 18450L, scoresHistory = listOf(58.0, 64.0, 72.0, 79.0, 85.0)),
-            Student("std_102", "প্রিয়াঙ্কা চক্রবর্তী", "SA-1043", "Primary TET", "+91 98302 34567", isApproved = true, activeTimeSeconds = 24100L, scoresHistory = listOf(75.0, 80.0, 84.0, 88.0, 92.5)),
-            Student("std_103", "রাহুল ঘোষ", "SA-1044", "WBP SI & Constable", "+91 98303 45678", isApproved = true, activeTimeSeconds = 12900L, scoresHistory = listOf(78.0, 74.0, 70.0, 65.0, 61.0)),
-            Student("std_104", "স্নেহা সেনগুপ্ত", "SA-1045", "SSC CGL", "+91 98304 56789", isApproved = false, activeTimeSeconds = 3200L, scoresHistory = listOf(65.0, 64.0, 66.0, 65.5, 65.0)),
-            Student("std_105", "অনিরুদ্ধ দত্ত", "SA-1046", "Railway NTPC", "+91 98305 67890", isApproved = true, activeTimeSeconds = 9800L, scoresHistory = listOf(52.0, 58.0, 63.0, 69.0, 76.0)),
-            Student("std_106", "মৌসুমি রায়", "SA-1047", "WBCS Prelims", "+91 98306 78901", isApproved = false, activeTimeSeconds = 1200L, scoresHistory = listOf(62.0, 58.0, 54.0, 50.0, 46.0))
+            Student(
+                id = "admin_master",
+                name = "ইনস্টিটিউট অ্যাডমিন (আপনি)",
+                rollNo = "ADM-01",
+                targetExam = "অ্যাডমিন কন্ট্রোল",
+                phone = "+91 98765 43210",
+                isApproved = true,
+                isAdmin = true,
+                canAccessMockTests = true,
+                canAccessPdfs = true,
+                registrationDate = "আজ",
+                activeTimeSeconds = 0L,
+                batch = "প্রধান অ্যাডমিন প্যানেল",
+                scoresHistory = emptyList()
+            )
         )
     )
     val allStudents: StateFlow<List<Student>> = _allStudents.asStateFlow()
 
-    // Exam Routine
-    private val _examRoutines = MutableStateFlow(
-        listOf(
-            ExamRoutine(
-                id = "rout_1",
-                title = "WBCS প্রিলিমস গ্র্যান্ড মক টেস্ট - পর্ব ১",
-                titleEn = "WBCS Prelims Grand Mock Test - Part 1",
-                titleHi = "WBCS प्रीलिम्स ग्रैंड मॉक टेस्ट - भाग 1",
-                targetExam = "WBCS 2026",
-                subject = "ভারতের ইতিহাস, ভূগোল ও সংবিধান",
-                date = "রবিবার, ৮ নভেম্বর",
-                timeSlot = "সকাল ১০:০০ - দুপুর ১২:৩০",
-                syllabus = "আধুনিক ভারতের ইতিহাস (১৮৫৭-১৯৪৭), পশ্চিমবঙ্গের ভূগোল, মৌলিক অধিকার ও সংসদীয় ব্যবস্থা",
-                totalMarks = 100,
-                negativeMarkRate = 0.25,
-                durationMinutes = 60
-            ),
-            ExamRoutine(
-                id = "rout_2",
-                title = "পশ্চিমবঙ্গ পুলিশ SI ও কনস্টেবল স্পেশাল টেস্ট",
-                titleEn = "WB Police SI & Constable Special Test",
-                titleHi = "पश्चिम बंगाल पुलिस SI व कांस्टेबल स्पेशल टेस्ट",
-                targetExam = "WBP SI / Constable",
-                subject = "পাটিগণিত ও সাধারণ জ্ঞান",
-                date = "বুধবার, ১১ নভেম্বর",
-                timeSlot = "সন্ধ্যা ৭:০০ - রাত ৮:০০",
-                syllabus = "শতকরা, লাভ ও ক্ষতি, অনুপাত, সমসাময়িক ঘটনাবলী ও সাধারণ বিজ্ঞান",
-                totalMarks = 50,
-                negativeMarkRate = 0.25,
-                durationMinutes = 45
-            ),
-            ExamRoutine(
-                id = "rout_3",
-                title = "SSC CGL টিয়ার-১ রিজনিং ও ইংলিশ কমপ্রিহেনশন",
-                titleEn = "SSC CGL Tier-1 Reasoning & English",
-                titleHi = "SSC CGL टियर-1 रीजनिंग व इंग्लिश",
-                targetExam = "SSC CGL 2026",
-                subject = "Reasoning & English Comprehension",
-                date = "শনিবার, ১৪ নভেম্বর",
-                timeSlot = "দুপুর ৩:০০ - বিকেল ৪:০০",
-                syllabus = "Syllogism, Blood Relations, Idioms & Phrases, Spotting Errors",
-                totalMarks = 50,
-                negativeMarkRate = 0.50,
-                durationMinutes = 40
-            ),
-            ExamRoutine(
-                id = "rout_4",
-                title = "প্রাইমারি টেট (Primary TET) শিশু মনস্তত্ত্ব টেস্ট",
-                titleEn = "Primary TET Child Pedagogy Test",
-                titleHi = "प्राइमरी टीईटी बाल मनोविज्ञान टेस्ट",
-                targetExam = "WB Primary TET",
-                subject = "Child Development & Bengali Pedagogy",
-                date = "সোমবার, ১৬ নভেম্বর",
-                timeSlot = "সকাল ১১:০০ - দুপুর ১২:১৫",
-                syllabus = "পেডাগজি ও শিশু মনস্তত্ত্ব, বাংলা ভাষার ব্যাকরণ ও শিখনপদ্ধতি",
-                totalMarks = 50,
-                negativeMarkRate = 0.0,
-                durationMinutes = 50
-            )
-        )
-    )
+    // Exam Routine (Empty by default - user creates their own)
+    private val _examRoutines = MutableStateFlow<List<ExamRoutine>>(emptyList())
     val examRoutines: StateFlow<List<ExamRoutine>> = _examRoutines.asStateFlow()
 
-    // Mock Tests
-    private val _mockTests = MutableStateFlow(createSampleMockTests())
+    // Mock Tests (Empty by default - user uploads their own)
+    private val _mockTests = MutableStateFlow<List<MockTest>>(emptyList())
     val mockTests: StateFlow<List<MockTest>> = _mockTests.asStateFlow()
 
-    // Test Attempts History
-    private val _testAttempts = MutableStateFlow<List<TestAttempt>>(createSampleAttempts())
+    // Test Attempts History (Empty by default)
+    private val _testAttempts = MutableStateFlow<List<TestAttempt>>(emptyList())
     val testAttempts: StateFlow<List<TestAttempt>> = _testAttempts.asStateFlow()
 
-    // Books and Scheduled PDF Tests
+    // Books and Scheduled PDF Tests (Categories: History, Geography, Science, Reasoning, Math, Constitution)
     private val _pdfBooks = MutableStateFlow(createSamplePdfs())
     val pdfBooks: StateFlow<List<PdfBook>> = _pdfBooks.asStateFlow()
 
     // Live Classes
-    private val _liveClasses = MutableStateFlow(
-        listOf(
-            LiveClass(
-                id = "live_1",
-                title = "WBCS প্রিলিমিনারির জন্য আধুনিক ভারতের জাতীয় আন্দোলন (Masterclass)",
-                subject = "ভারতের ইতিহাস (History)",
-                facultyName = "প্রফেসর অমিতাভ চ্যাটার্জী (Ex-WBCS Officer)",
-                facultyDesignation = "সিনিয়র ফ্যাকাল্টি, সংকল্প একাডেমি",
-                scheduledTime = "আজ সরাসরি চলছে",
-                isLiveNow = true,
-                liveStudentCount = 142,
-                summary = "স্বদেশী আন্দোলন, গান্ধীজীর উত্থান ও নেতাজীর আজাদ হিন্দ ফৌজের সংগ্রাম বিষয়ে গভীর আলোচনা।"
-            ),
-            LiveClass(
-                id = "live_2",
-                title = "শর্টকাট মেথডে পরিমিতি ও বীজগণিত সমাধান",
-                subject = "কোয়ান্টিটেটিভ অ্যাপটিটিউড (Math)",
-                facultyName = "সুজিত কুমার বিশ্বাস (M.Sc, B.Ed)",
-                facultyDesignation = "ম্যাথমেটিক্স স্পেশালিস্ট",
-                scheduledTime = "আজ সন্ধ্যা ৭:০০ টা",
-                isLiveNow = false,
-                liveStudentCount = 0,
-                summary = "চক্রবৃদ্ধি সুদ, অংশীদারি কারবার ও জ্যামিতির জটিল সূত্রের সহজ টেকনিক।"
-            ),
-            LiveClass(
-                id = "live_3",
-                title = "West Bengal Current Affairs & Government Schemes 2026",
-                subject = "সাম্প্রতিক ঘটনাপ্রবাহ",
-                facultyName = "অনন্যা মুখার্জী",
-                facultyDesignation = "কান্ট্রি অ্যান্ড স্টেট জিকে রিসার্চার",
-                scheduledTime = "আগামীকাল সকাল ৯:০০ টা",
-                isLiveNow = false,
-                liveStudentCount = 0,
-                summary = "কন্যাশ্রী, লক্ষ্মীর ভাণ্ডার, কৃষক বন্ধু ও পশ্চিমবঙ্গের বাজেট সংক্রান্ত প্রশ্নাবলী।"
-            )
-        )
-    )
+    private val _liveClasses = MutableStateFlow<List<LiveClass>>(emptyList())
     val liveClasses: StateFlow<List<LiveClass>> = _liveClasses.asStateFlow()
 
     // Institute Notices
@@ -163,111 +82,22 @@ class JobPrepRepository {
         listOf(
             InstituteNotice(
                 id = "not_1",
-                title = "🚨 WBCS 2026 প্রিলিমিনারি পরীক্ষার অফিশিয়াল দিন ধার্য",
-                dateString = "৩১ অক্টোবর, ২০২৬",
-                category = "পরীক্ষার বিজ্ঞপ্তি",
-                content = "পশ্চিমবঙ্গ পাবলিক সার্ভিস কমিশন (WBPSC) কর্তৃক WBCS প্রিলিমিনারি পরীক্ষা আগামী ২০ ডিসেম্বর ২০২৬ অনুষ্ঠিত হবে। সকল শিক্ষার্থীকে নির্ধারিত মক টেস্টে নিয়মিত অংশগ্রহণের অনুরোধ জানানো হচ্ছে।",
-                isUrgent = true,
-                examTargetDateTimestamp = System.currentTimeMillis() + (50L * 24 * 3600 * 1000)
-            ),
-            InstituteNotice(
-                id = "not_2",
-                title = "🔒 মক টেস্টে নতুন চিটিং প্রতিরোধক লকডাউন সিকিউরিটি সক্রিয়",
-                dateString = "২৯ অক্টোবর, ২০২৬",
-                category = "পরীক্ষা গাইডলাইন",
-                content = "অনলাইন মক টেস্ট চলাকালীন অ্যাপ ছেড়ে অন্য কোনো ব্রাউজার বা ট্যাবে যাওয়া কঠোরভাবে নিষিদ্ধ। পরপর ৩ বার উইন্ডো বদল করলে টেস্ট স্বয়ংক্রিয়ভাবে বাতিল ও সাবমিট হবে। তবে পরীক্ষা শেষে রিভিউ মোডে ব্যাকগ্রাউন্ড রেফারেন্স দেখার অনুমতি রয়েছে।",
-                isUrgent = true
-            ),
-            InstituteNotice(
-                id = "not_3",
-                title = "📚 নভেম্বর মাসের মাসিক ফি জমার শেষ তারিখ ১৫ নভেম্বর",
-                dateString = "২৮ অক্টোবর, ২০২৬",
-                category = "ফি বিজ্ঞপ্তি",
-                content = "সকল ছাত্রছাত্রীদের অনুরোধ করা হচ্ছে অ্যাপের 'অনলাইন ফি পেমেন্ট' সেকশন থেকে UPI বা কার্ডের মাধ্যমে মাসিক ফি জমা দিয়ে ডিজিটাল রসিদ সংগ্রহ করুন।"
-            ),
-            InstituteNotice(
-                id = "not_4",
-                title = "📖 নতুন পরিবেশ বিদ্যা ও বিজ্ঞান ই-বুক লাইব্রেরিতে উন্মুক্ত",
-                dateString = "২৬ অক্টোবর, ২০২৬",
-                category = "লাইব্রেরি আপডেট",
-                content = "প্রাইমারি টেট ও রেলওয়ে পরীক্ষার জন্য ৫০০ পৃষ্ঠার এক্সক্লুসিভ স্টাডি ম্যাটেরিয়াল লাইব্রেরি সেকশনে যুক্ত করা হয়েছে।"
+                title = "স্বাগতম আপনার নিজস্ব মক টেস্ট প্ল্যাটফর্মে",
+                dateString = "আজ",
+                category = "ইনস্টিটিউট সূচনা",
+                content = "এই অ্যাপটি সম্পূর্ণ আপনার নিজস্ব। অ্যাডমিন প্যানেল থেকে আপনি সরাসরি প্রশ্ন টাইপ করে অথবা পিডিএফ থেকে এক্সট্র্যাক্ট করে মক টেস্ট তৈরি করতে পারবেন। ছাত্রছাত্রীরা ফোন নম্বর দিয়ে রেজিস্ট্রেশন করলে আপনার কাছে রিকোয়েস্ট আসবে এবং আপনি তাদের অনুমোদন দিতে পারবেন।",
+                isUrgent = false
             )
         )
     )
     val notices: StateFlow<List<InstituteNotice>> = _notices.asStateFlow()
 
     // Fee Payments
-    private val _feePayments = MutableStateFlow(
-        listOf(
-            FeePayment(
-                id = "fee_nov",
-                title = "নভেম্বর ২০২৬ - ইনস্টিটিউট টিউশন ও মক টেস্ট ফি",
-                amount = 1200.0,
-                billingMonth = "নভেম্বর ২০২৬",
-                dueDate = "১৫ নভেম্বর, ২০২৬",
-                isPaid = false
-            ),
-            FeePayment(
-                id = "fee_oct",
-                title = "অক্টোবর ২০২৬ - ইনস্টিটিউট টিউশন ও স্টাডি ম্যাটেরিয়াল ফি",
-                amount = 1200.0,
-                billingMonth = "অক্টোবর ২০২৬",
-                dueDate = "১৫ অক্টোবর, ২০২৬",
-                isPaid = true,
-                transactionId = "UPI-SANKALP-99482143",
-                paymentDate = "১০ অক্টোবর, ২০২৬",
-                paymentMethod = "Google Pay (UPI)"
-            ),
-            FeePayment(
-                id = "fee_sep",
-                title = "সেপ্টেম্বর ২০২৬ - অ্যাডমিশন ও রেজিস্ট্রেশন ফি",
-                amount = 1500.0,
-                billingMonth = "সেপ্টেম্বর ২০২৬",
-                dueDate = "০৫ সেপ্টেম্বর, ২০২৬",
-                isPaid = true,
-                transactionId = "UPI-SANKALP-88123049",
-                paymentDate = "০৩ সেপ্টেম্বর, ২০২৬",
-                paymentMethod = "PhonePe (UPI)"
-            )
-        )
-    )
+    private val _feePayments = MutableStateFlow<List<FeePayment>>(emptyList())
     val feePayments: StateFlow<List<FeePayment>> = _feePayments.asStateFlow()
 
     // Chat messages
-    private val _chatMessages = MutableStateFlow(
-        listOf(
-            ChatMessage(
-                id = "msg_1",
-                senderName = "সুমন ব্যানার্জী (শিক্ষার্থী)",
-                isTeacher = false,
-                messageText = "স্যার, WBCS ইতিহাস প্রশ্নে ১৯৩২ সালের পুনা চুক্তি সম্পর্কিত প্রশ্নে একটা সন্দেহ আছে।",
-                timestamp = System.currentTimeMillis() - 7200000
-            ),
-            ChatMessage(
-                id = "msg_2",
-                senderName = "প্রফেসর অমিতাভ চ্যাটার্জী (শিক্ষক)",
-                isTeacher = true,
-                messageText = "হ্যাঁ সুমন, পুনা চুক্তি মহাত্মা গান্ধী ও ড. বি আর আম্বেদকরের মধ্যে হয়েছিল দলিতদের পৃথক নির্বাচন ব্যবস্থার পরিবর্তে যৌথ নির্বাচনের সংরক্ষিত আসন বিষয়ে। এই নোটসটি দেখে নাও।",
-                attachmentName = "Poona_Pact_Summary_Notes.pdf",
-                attachmentType = "PDF",
-                timestamp = System.currentTimeMillis() - 5400000
-            ),
-            ChatMessage(
-                id = "msg_3",
-                senderName = "সুমন ব্যানার্জী (শিক্ষার্থী)",
-                isTeacher = false,
-                messageText = "অনেক ধন্যবাদ স্যার! আর আগামী রবিবারের মক টেস্টে কি আধুনিক ভারতের সব অংশ থাকবে?",
-                timestamp = System.currentTimeMillis() - 3600000
-            ),
-            ChatMessage(
-                id = "msg_4",
-                senderName = "প্রফেসর অমিতাভ চ্যাটার্জী (শিক্ষক)",
-                isTeacher = true,
-                messageText = "হ্যাঁ, ১৮৫৭ সালের মহাবিদ্রোহ থেকে ১৯৪৭ স্বাধীনতা আইন পর্যন্ত। ভালো করে রিভিশন দাও!",
-                timestamp = System.currentTimeMillis() - 1800000
-            )
-        )
-    )
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
     fun setLanguage(language: AppLanguage) {
@@ -278,15 +108,160 @@ class JobPrepRepository {
         _isAdminMode.update { !it }
     }
 
-    fun setStudentApproval(studentId: String, approved: Boolean) {
+    fun registerOrUpdateAdmin(name: String, phone: String) {
+        val adminName = name.ifBlank { "ইনস্টিটিউট অ্যাডমিন" }
+        val adminPhone = phone.ifBlank { "+91 98765 43210" }
+        val updatedAdmin = Student(
+            id = "admin_master",
+            name = adminName,
+            rollNo = "ADM-01",
+            targetExam = "ইনস্টিটিউট অ্যাডমিন প্যানেল",
+            phone = adminPhone,
+            isApproved = true,
+            isAdmin = true,
+            canAccessMockTests = true,
+            canAccessPdfs = true,
+            registrationDate = "অ্যাডমিন রেজিস্টার্ড",
+            activeTimeSeconds = 0L,
+            batch = "প্রধান অ্যাডমিন",
+            scoresHistory = emptyList()
+        )
+        _currentStudent.value = updatedAdmin
+        _isAdminMode.value = true
+        _allStudents.update { list ->
+            listOf(updatedAdmin) + list.filterNot { it.id == "admin_master" }
+        }
+    }
+
+    fun registerStudentWithPhone(name: String, phone: String, targetExam: String): Student {
+        val newStudent = Student(
+            id = "std_${System.currentTimeMillis()}",
+            name = name.ifBlank { "নতুন শিক্ষার্থী" },
+            rollNo = "CP-${(100..999).random()}",
+            targetExam = targetExam.ifBlank { "চাকরির প্রস্তুতি" },
+            phone = phone,
+            isApproved = false, // Admin must approve!
+            isAdmin = false,
+            canAccessMockTests = false, // Admin grants permission!
+            canAccessPdfs = false,      // Admin grants permission!
+            registrationDate = "আজ নতুন রেজিস্ট্রেশন",
+            activeTimeSeconds = 0L,
+            batch = "কম্পিটিটিভ পাঠশালা"
+        )
+        _allStudents.update { listOf(newStudent) + it }
+        _currentStudent.value = newStudent
+        return newStudent
+    }
+
+    fun approveStudent(studentId: String) {
         _allStudents.update { list ->
             list.map { student ->
-                if (student.id == studentId) student.copy(isApproved = approved) else student
+                if (student.id == studentId) {
+                    student.copy(isApproved = true, canAccessMockTests = true, canAccessPdfs = true)
+                } else student
             }
         }
         if (_currentStudent.value.id == studentId) {
-            _currentStudent.update { it.copy(isApproved = approved) }
+            _currentStudent.update { it.copy(isApproved = true, canAccessMockTests = true, canAccessPdfs = true) }
         }
+    }
+
+    fun rejectStudent(studentId: String) {
+        _allStudents.update { list -> list.filterNot { it.id == studentId } }
+        if (_currentStudent.value.id == studentId) {
+            _allStudents.value.firstOrNull()?.let { _currentStudent.value = it }
+        }
+    }
+
+    // Toggle individual student permission for Mock Tests
+    fun toggleMockTestPermission(studentId: String) {
+        _allStudents.update { list ->
+            list.map { student ->
+                if (student.id == studentId) {
+                    val updated = !student.canAccessMockTests
+                    student.copy(canAccessMockTests = updated)
+                } else student
+            }
+        }
+        if (_currentStudent.value.id == studentId) {
+            _currentStudent.update { it.copy(canAccessMockTests = !it.canAccessMockTests) }
+        }
+    }
+
+    // Toggle individual student permission for PDFs
+    fun togglePdfPermission(studentId: String) {
+        _allStudents.update { list ->
+            list.map { student ->
+                if (student.id == studentId) {
+                    val updated = !student.canAccessPdfs
+                    student.copy(canAccessPdfs = updated)
+                } else student
+            }
+        }
+        if (_currentStudent.value.id == studentId) {
+            _currentStudent.update { it.copy(canAccessPdfs = !it.canAccessPdfs) }
+        }
+    }
+
+    fun grantAllMockTestPermission(grant: Boolean) {
+        _allStudents.update { list ->
+            list.map { student ->
+                if (!student.isAdmin) student.copy(canAccessMockTests = grant) else student
+            }
+        }
+        if (!_currentStudent.value.isAdmin) {
+            _currentStudent.update { it.copy(canAccessMockTests = grant) }
+        }
+    }
+
+    fun grantAllPdfPermission(grant: Boolean) {
+        _allStudents.update { list ->
+            list.map { student ->
+                if (!student.isAdmin) student.copy(canAccessPdfs = grant) else student
+            }
+        }
+        if (!_currentStudent.value.isAdmin) {
+            _currentStudent.update { it.copy(canAccessPdfs = grant) }
+        }
+    }
+
+    // WhatsApp Group Admin style: Individually make any student Admin or dismiss Admin
+    fun toggleAdminRole(studentId: String) {
+        _allStudents.update { list ->
+            list.map { student ->
+                if (student.id == studentId) {
+                    val newRole = !student.isAdmin
+                    student.copy(
+                        isAdmin = newRole,
+                        canAccessMockTests = if (newRole) true else student.canAccessMockTests,
+                        canAccessPdfs = if (newRole) true else student.canAccessPdfs
+                    )
+                } else student
+            }
+        }
+        if (_currentStudent.value.id == studentId) {
+            val newRole = !_currentStudent.value.isAdmin
+            _currentStudent.update {
+                it.copy(
+                    isAdmin = newRole,
+                    canAccessMockTests = if (newRole) true else it.canAccessMockTests,
+                    canAccessPdfs = if (newRole) true else it.canAccessPdfs
+                )
+            }
+        }
+    }
+
+    fun switchToStudent(studentId: String) {
+        _allStudents.value.find { it.id == studentId }?.let { target ->
+            _currentStudent.value = target
+            if (target.isAdmin) {
+                _isAdminMode.value = true
+            }
+        }
+    }
+
+    fun setStudentApproval(studentId: String, approved: Boolean) {
+        if (approved) approveStudent(studentId) else rejectStudent(studentId)
     }
 
     fun togglePdfLock(pdfId: String) {
@@ -305,6 +280,7 @@ class JobPrepRepository {
         mockTest: MockTest,
         answers: Map<Int, Int>,
         timeSpentSeconds: Int,
+        questionTimeSeconds: Map<Int, Int> = emptyMap(),
         violationStrikes: Int
     ): TestAttempt {
         var correct = 0
@@ -344,6 +320,7 @@ class JobPrepRepository {
             unattemptedCount = unattempted,
             negativeDeducted = Math.round(negativeMarks * 100.0) / 100.0,
             timeSpentSeconds = timeSpentSeconds,
+            questionTimeSeconds = questionTimeSeconds,
             violationStrikes = violationStrikes
         )
 
@@ -353,7 +330,7 @@ class JobPrepRepository {
 
     fun sendChatMessage(text: String, attachmentName: String? = null, attachmentType: String? = null) {
         val isTeacher = _isAdminMode.value
-        val name = if (isTeacher) "প্রফেসর অমিতাভ চ্যাটার্জী (শিক্ষক)" else _currentStudent.value.name
+        val name = if (isTeacher) "শিক্ষক (কম্পিটিটিভ পাঠশালা)" else _currentStudent.value.name
         val newMsg = ChatMessage(
             id = "msg_${System.currentTimeMillis()}",
             senderName = name,
@@ -366,7 +343,7 @@ class JobPrepRepository {
     }
 
     fun payFee(feeId: String, paymentMethod: String): Boolean {
-        val txId = "UPI-SANKALP-${(10000000..99999999).random()}"
+        val txId = "UPI-CPATHSHALA-${(10000000..99999999).random()}"
         _feePayments.update { list ->
             list.map { fee ->
                 if (fee.id == feeId) {
@@ -424,6 +401,28 @@ class JobPrepRepository {
             list.map { test ->
                 if (test.id == testId) {
                     val updatedQuestions = test.questions + question.copy(id = test.questions.size + 1)
+                    val newTotalMarks = (updatedQuestions.size * test.markPerCorrect).toInt()
+                    test.copy(
+                        questions = updatedQuestions,
+                        totalMarks = newTotalMarks,
+                        descriptionBengali = "${test.category} মক টেস্ট • মোট প্রশ্ন: ${updatedQuestions.size} টি • সময়: ${test.durationMinutes} মিনিট"
+                    )
+                } else test
+            }
+        }
+    }
+
+    // Direct upload of multiple questions extracted from PDF / Raw Text
+    fun addQuestionsBatchToMockTest(testId: String, newQuestions: List<MockQuestion>) {
+        _mockTests.update { list ->
+            list.map { test ->
+                if (test.id == testId) {
+                    var currentId = test.questions.size
+                    val formattedNewQuestions = newQuestions.map { q ->
+                        currentId++
+                        q.copy(id = currentId)
+                    }
+                    val updatedQuestions = test.questions + formattedNewQuestions
                     val newTotalMarks = (updatedQuestions.size * test.markPerCorrect).toInt()
                     test.copy(
                         questions = updatedQuestions,
@@ -624,7 +623,7 @@ class JobPrepRepository {
                 mockTestId = "test_wbcs_01",
                 mockTestTitle = "WBCS 2026 প্রিলিমিনারি মডেল মক টেস্ট - ১",
                 studentId = "std_101",
-                studentName = "সুমন ব্যানার্জী",
+                studentName = "শিক্ষার্থী",
                 attemptNumber = 1,
                 userAnswers = mapOf(0 to 1, 1 to 0, 2 to 1, 3 to 1, 4 to 2, 5 to 0, 6 to 2),
                 score = 5.75,
@@ -643,9 +642,9 @@ class JobPrepRepository {
         return listOf(
             PdfBook(
                 id = "pdf_exam_01",
-                title = "🔒 WBCS মক টেস্ট পেপার - ২০২৬ (পিডিএফ স্পেশাল শিডিউলড এক্সাম)",
-                author = "সংকল্প একাডেমি রিসার্চ প্যানেল",
-                category = "শিডিউলড পিডিএফ টেস্ট",
+                title = "🔒 কম্পিটিটিভ পাঠশালা মক টেস্ট পেপার (শিডিউলড এক্সাম)",
+                author = "কম্পিটিটিভ পাঠশালা রিসার্চ প্যানেল",
+                category = "শিডিউলড টেস্ট",
                 totalPages = 12,
                 fileSize = "2.4 MB",
                 isScheduledExamPdf = true,
@@ -653,15 +652,15 @@ class JobPrepRepository {
                 scheduledUnlockTime = "রবিবার সকাল ১০:০০ টা (নির্দিষ্ট সময়ে আনলক হবে)",
                 description = "এই পিডিএফ টেস্টটি নির্দিষ্ট সময়ে স্বয়ংক্রিয়ভাবে বা শিক্ষকের নির্দেশে আনলক হবে। শিক্ষার্থীরা নির্দিষ্ট সময়ে প্রশ্ন দেখে অ্যাপের মাধ্যমে উত্তর সাবমিট করবে।",
                 samplePages = listOf(
-                    "সংকল্প একাডেমি - সাপ্তাহিক টেস্ট পেপার (পৃষ্ঠা ১)\nবিভাগ ক: প্রাচীন ও মধ্যযুগীয় ইতিহাস\n১. হরপ্পা সভ্যতার বৃহত্তম প্রত্নক্ষেত্র কোনটি?\n২. সম্রাট অশোকের কলিঙ্গ যুদ্ধের বিবরণ কোন শিলালিপিতে রয়েছে?\n৩. দিল্লির কোন সুলতান রক্ত ও লৌহ নীতি (Blood and Iron policy) গ্রহণ করেন?",
-                    "সংকল্প একাডেমি - সাপ্তাহিক টেস্ট পেপার (পৃষ্ঠা ২)\nবিভাগ খ: ভূগোল ও পরিবেশ\n৪. তিস্তা নদীর উৎপত্তি কোন হিমবাহ থেকে?\n৫. পশ্চিমবঙ্গের সুন্দরবনকে রামসার সাইট হিসেবে কবে ঘোষণা করা হয়?"
+                    "কম্পিটিটিভ পাঠশালা - সাপ্তাহিক টেস্ট পেপার (পৃষ্ঠা ১)\nবিভাগ ক: প্রাচীন ও মধ্যযুগীয় ইতিহাস\n১. হরপ্পা সভ্যতার বৃহত্তম প্রত্নক্ষেত্র কোনটি?\n২. সম্রাট অশোকের কলিঙ্গ যুদ্ধের বিবরণ কোন শিলালিপিতে রয়েছে?\n৩. দিল্লির কোন সুলতান রক্ত ও লৌহ নীতি (Blood and Iron policy) গ্রহণ করেন?",
+                    "কম্পিটিটিভ পাঠশালা - সাপ্তাহিক টেস্ট পেপার (পৃষ্ঠা ২)\nবিভাগ খ: ভূগোল ও পরিবেশ\n৪. তিস্তা নদীর উৎপত্তি কোন হিমবাহ থেকে?\n৫. পশ্চিমবঙ্গের সুন্দরবনকে রামসার সাইট হিসেবে কবে ঘোষণা করা হয়?"
                 )
             ),
             PdfBook(
-                id = "pdf_book_02",
-                title = "ভারতের স্বাধীনতা সংগ্রামের সম্পূর্ণ ইতিহাস ও সংক্ষিপ্ত সূত্রাবলী",
-                author = "অধ্যাপক অমিতাভ চ্যাটার্জী",
-                category = "ইতিহাস (History)",
+                id = "pdf_hist_01",
+                title = "ভারতের স্বাধীনতা সংগ্রাম ও প্রাচীন-মধ্যযুগীয় ইতিহাস নোটস",
+                author = "কম্পিটিটিভ পাঠশালা ফ্যাকাল্টি",
+                category = "ইতিহাস",
                 totalPages = 145,
                 fileSize = "8.6 MB",
                 isScheduledExamPdf = false,
@@ -673,17 +672,78 @@ class JobPrepRepository {
                 )
             ),
             PdfBook(
-                id = "pdf_book_03",
-                title = "পাটিগণিত ও শর্টকাট শর্ট-ট্রিকস সংকলন (বাংলা ও ইংরেজি)",
-                author = "সুজিত কুমার বিশ্বাস",
-                category = "গণিত (Quantitative Aptitude)",
+                id = "pdf_geo_01",
+                title = "পশ্চিমবঙ্গ ও ভারতের সামগ্রিক ভূগোল মানচিত্র ও সারসংক্ষেপ",
+                author = "কম্পিটিটিভ পাঠশালা ফ্যাকাল্টি",
+                category = "ভূগোল",
+                totalPages = 120,
+                fileSize = "7.2 MB",
+                isScheduledExamPdf = false,
+                isLocked = false,
+                description = "পশ্চিমবঙ্গের জেলাভিত্তিক সম্পদ, নদনদী, কৃষিকাজ, শিল্পাঞ্চল এবং ভারতের ভূ-প্রকৃতি সংক্রান্ত সম্পূর্ণ নোটস।",
+                samplePages = listOf(
+                    "অধ্যায় ১: পশ্চিমবঙ্গের ভূ-প্রাকৃতিক বিভাগ\nউত্তরের পার্বত্য অঞ্চল, পশ্চিমের মালভূমি অঞ্চল এবং গাঙ্গেয় সমভূমি অঞ্চলের বিস্তারিত আলোচনা। সান্দাকফু (৩৬৩৬ মি) রাজ্যের সর্বোচ্চ শৃঙ্গ।",
+                    "অধ্যায় ২: ভারতের নদী ব্যবস্থা\nহিমালয় সৃষ্ট নদীসমূহ (গঙ্গা, সিন্ধু, ব্রহ্মপুত্র) এবং উপদ্বীপীয় নদীসমূহের (গোদাবরী, কৃষ্ণা, কাবেরী) গতিপথ ও উপনদী।"
+                )
+            ),
+            PdfBook(
+                id = "pdf_sci_01",
+                title = "সাধারণ বিজ্ঞান (পদার্থ, রসায়ন ও জীববিদ্যা) কমপ্লিট গাইড",
+                author = "কম্পিটিটিভ পাঠশালা ফ্যাকাল্টি",
+                category = "সায়েন্স",
+                totalPages = 160,
+                fileSize = "9.5 MB",
+                isScheduledExamPdf = false,
+                isLocked = false,
+                description = "দৈনন্দিন জীবনে বিজ্ঞানের প্রয়োগ, ভিটামিন ও রোগব্যাধি, রাসায়নিক সংকেত এবং নিউটনের গতিসূত্রের ব্যাখ্যা।",
+                samplePages = listOf(
+                    "অধ্যায় ১: জীববিদ্যা ও মানব শারীরবিদ্যা\nরক্তের গ্রুপ, হৃদপিণ্ডের গঠন, মানবদেহের বিভিন্ন হরমোন ও প্রধান ভিটামিনসমূহের রাসায়নিক নাম ও অভাবজনিত রোগ।",
+                    "অধ্যায় ২: পদার্থবিজ্ঞান ও আলোকবিদ্যা\nআলোর প্রতিফলন, প্রতিসরণ ও বিচ্ছুরণ। রামধনু সৃষ্টির প্রাকৃতিক কারণ এবং উত্তল ও অবতল লেন্সের ব্যবহার।"
+                )
+            ),
+            PdfBook(
+                id = "pdf_reas_01",
+                title = "লজিক্যাল রিজনিং ও মেন্টাল অ্যাবিলিটি শর্টকাট ট্রিকস",
+                author = "কম্পিটিটিভ পাঠশালা ফ্যাকাল্টি",
+                category = "রিজনিং",
+                totalPages = 130,
+                fileSize = "6.8 MB",
+                isScheduledExamPdf = false,
+                isLocked = false,
+                description = "কোডিং-ডিকোডিং, রক্ত সম্পর্কিত সম্পর্ক (Blood Relation), সিটিং অ্যারেঞ্জমেন্ট ও সিরিজ টেস্টের সহজ সমাধান।",
+                samplePages = listOf(
+                    "অধ্যায় ১: কোডিং ও ডিকোডিং শর্টকাট\nইংরেজি বর্ণমালার বিপরীত বর্ণের মান মনে রাখার নিয়ম (A=Z, B=Y, C=X ইত্যাদি) এবং নম্বর কোডিং ট্রিকস।",
+                    "অধ্যায় ২: দিকনির্ণয় পরীক্ষা (Direction Sense Test)\nউত্তর, দক্ষিণ, পূর্ব, পশ্চিম এবং কোণ সম্পর্কিত সমস্যা সহজে পাইথাগোরাসের সূত্র দিয়ে নির্ণয়।"
+                )
+            ),
+            PdfBook(
+                id = "pdf_math_01",
+                title = "পাটিগণিত ও বীজগণিত শর্টকাট শর্ট-ট্রিকস সংকলন",
+                author = "কম্পিটিটিভ পাঠশালা ফ্যাকাল্টি",
+                category = "অঙ্ক",
                 totalPages = 210,
                 fileSize = "12.1 MB",
                 isScheduledExamPdf = false,
                 isLocked = false,
                 description = "চাকরির পরীক্ষার জন্য উপযোগী অনুপাত, শতকরা, সময় ও কার্য, নল ও চৌবাচ্চার শর্টকাট সূত্রাবলী।",
                 samplePages = listOf(
-                    "অধ্যায় ৩: শতকরা ও লাভ-ক্ষতির শর্টকাট নিয়ম\nসূত্র ১: যদি কোনো দ্রব্যের মূল্য x% বৃদ্ধি পায়, তবে খরচ অপরিবর্তিত রাখতে ব্যবহার কমাতে হবে = [x / (100 + x)] * 100%\nউদাহরণ: চিনির দাম ২০% বৃদ্ধি পেলে ব্যবহার কত কমাতে হবে?\nসমাধান: [২০ / ১২০] * ১০০% = ১৬.৬৬%।"
+                    "অধ্যায় ১: শতকরা ও লাভ-ক্ষতির শর্টকাট নিয়ম\nসূত্র ১: যদি কোনো দ্রব্যের মূল্য x% বৃদ্ধি পায়, তবে খরচ অপরিবর্তিত রাখতে ব্যবহার কমাতে হবে = [x / (100 + x)] * 100%\nউদাহরণ: চিনির দাম ২০% বৃদ্ধি পেলে ব্যবহার কত কমাতে হবে?\nসমাধান: [২০ / ১২০] * ১০০% = ১৬.৬৬%।",
+                    "অধ্যায় ২: সময় ও দূরত্ব\nট্রেন সংক্রান্ত অঙ্ক, আপেক্ষিক গতিবেগ (Relative Speed) এবং প্ল্যাটফর্ম অতিক্রমের দ্রুত সমাধান টেকনিক।"
+                )
+            ),
+            PdfBook(
+                id = "pdf_polity_01",
+                title = "ভারতীয় সংবিধান ও রাষ্ট্রব্যবস্থা (Indian Polity) পূর্ণাঙ্গ সংকলন",
+                author = "কম্পিটিটিভ পাঠশালা ফ্যাকাল্টি",
+                category = "সংবিধান",
+                totalPages = 175,
+                fileSize = "10.4 MB",
+                isScheduledExamPdf = false,
+                isLocked = false,
+                description = "সংবিধানের প্রস্তাবনা, মৌলিক অধিকার (ধারা ১২-৩৫), নির্দেশমূলক নীতি (DPSP), রাষ্ট্রপতি ও সুপ্রিম কোর্টের ক্ষমতা।",
+                samplePages = listOf(
+                    "অধ্যায় ১: ভারতীয় সংবিধানের প্রস্তাবনা ও উৎস\n১৯৪৯ সালের ২৬ নভেম্বর গণপরিষদে সংবিধান গৃহীত হয় এবং ১৯৫০ সালের ২৬ জানুয়ারি এটি কার্যকর হয়।",
+                    "অধ্যায় ২: মৌলিক অধিকার ও জরুরি অবস্থা\nধারা ৩২ অনুযায়ী ৫টি রিট (হেবিয়াস কর্পাস, ম্যান্ডামাস, প্রহিবিশন, সারশিওরারি, কুও-ওয়ারেন্টো) এবং জাতীয় জরুরি অবস্থা (ধারা ৩৫২)।"
                 )
             )
         )

@@ -49,7 +49,6 @@ fun JobPrepApp(
     val pdfBooks by viewModel.pdfBooks.collectAsState()
     val liveClasses by viewModel.liveClasses.collectAsState()
     val notices by viewModel.notices.collectAsState()
-    val feePayments by viewModel.feePayments.collectAsState()
     val chatMessages by viewModel.chatMessages.collectAsState()
 
     // Active exam states
@@ -57,14 +56,13 @@ fun JobPrepApp(
     val currentQuestionIndex by viewModel.currentQuestionIndex.collectAsState()
     val selectedAnswers by viewModel.selectedAnswers.collectAsState()
     val timeRemainingSeconds by viewModel.timeRemainingSeconds.collectAsState()
+    val perQuestionTimeSeconds by viewModel.perQuestionTimeSeconds.collectAsState()
     val violationStrikes by viewModel.examViolationStrikes.collectAsState()
     val isViolationDialogVisible by viewModel.violationWarningDialogVisible.collectAsState()
     val lastAttemptResult by viewModel.lastAttemptResult.collectAsState()
 
-    // PDF OMR & Fees
+    // PDF OMR
     val pdfOmrAnswers by viewModel.pdfOmrAnswers.collectAsState()
-    val selectedFeeToPay by viewModel.selectedFeeToPay.collectAsState()
-    val latestReceipt by viewModel.latestReceipt.collectAsState()
 
     val canNavigateBack = currentScreen !is Screen.Home
 
@@ -72,11 +70,23 @@ fun JobPrepApp(
         viewModel.navigateBack()
     }
 
-    // Role-based Access Control: If student is not approved and in Student Mode, show AccessRestrictedScreen
+    // Role-based Access Control: WhatsApp phone registration & approval check
     if (!currentStudent.isApproved && !isAdminMode) {
-        AccessRestrictedScreen(
-            student = currentStudent,
-            onSwitchToAdmin = { viewModel.toggleAdminMode() }
+        PhoneAuthScreen(
+            currentStudent = currentStudent,
+            allStudents = allStudents,
+            onRegister = { name, phone, exam ->
+                viewModel.registerWithPhone(name, phone, exam)
+            },
+            onSwitchUser = { stdId ->
+                viewModel.switchToStudent(stdId)
+            },
+            onOpenAdmin = {
+                viewModel.toggleAdminMode()
+            },
+            onContinueToApp = {
+                viewModel.navigateTo(Screen.Home)
+            }
         )
         return
     }
@@ -90,13 +100,14 @@ fun JobPrepApp(
         is Screen.ExamReview -> Strings.reviewAnswers(appLanguage)
         is Screen.Library -> Strings.navLibrary(appLanguage)
         is Screen.PdfViewer -> "পিডিএফ ভিউয়ার"
-        is Screen.LiveClassList -> Strings.navLiveClass(appLanguage)
+        is Screen.LiveClassList -> "লাইভ ক্লাস"
         is Screen.LiveRoom -> "লাইভ ভিডিও ক্লাস"
         is Screen.Analytics -> Strings.navAnalytics(appLanguage)
         is Screen.Chat -> "শিক্ষক-শিক্ষার্থী চ্যাট"
-        is Screen.Fees -> "অনলাইন ফি পেমেন্ট"
+        is Screen.Fees -> "ফি তথ্য"
         is Screen.Admin -> "ইনস্টিটিউট অ্যাডমিন প্যানেল"
         is Screen.AiChatbot -> Strings.chatbotAssistant(appLanguage)
+        is Screen.PhoneAuth -> "WhatsApp রেজিস্ট্রেশন ও আইডি"
     }
 
     val showBars = currentScreen !is Screen.ActiveExam && currentScreen !is Screen.LiveRoom && currentScreen !is Screen.PdfViewer
@@ -113,7 +124,6 @@ fun JobPrepApp(
                     onAdminToggle = { viewModel.toggleAdminMode() },
                     onOpenChat = { viewModel.navigateTo(Screen.Chat) },
                     onOpenAiChat = { viewModel.navigateTo(Screen.AiChatbot) },
-                    onOpenFees = { viewModel.navigateTo(Screen.Fees) },
                     canNavigateBack = canNavigateBack,
                     onBackClick = { viewModel.navigateBack() }
                 )
@@ -174,9 +184,11 @@ fun JobPrepApp(
                             currentQuestionIndex = currentQuestionIndex,
                             selectedAnswers = selectedAnswers,
                             timeRemainingSeconds = timeRemainingSeconds,
+                            perQuestionTimeSeconds = perQuestionTimeSeconds,
                             violationStrikes = violationStrikes,
                             isViolationDialogVisible = isViolationDialogVisible,
                             language = appLanguage,
+                            onLanguageChange = { newLang -> viewModel.setLanguage(newLang) },
                             onSelectAnswer = { qIdx, optIdx -> viewModel.selectAnswer(qIdx, optIdx) },
                             onClearAnswer = { qIdx -> viewModel.clearAnswer(qIdx) },
                             onGoToQuestion = { qIdx -> viewModel.goToQuestion(qIdx) },
@@ -218,6 +230,7 @@ fun JobPrepApp(
                             attempt = attempt,
                             mockTest = test,
                             language = appLanguage,
+                            onLanguageChange = { newLang -> viewModel.setLanguage(newLang) },
                             onAskTeacher = { doubtQuestion ->
                                 viewModel.sendChatMessage("স্যার, এই প্রশ্নটিতে সন্দেহ রয়েছে:\n$doubtQuestion")
                                 viewModel.navigateTo(Screen.Chat)
@@ -249,21 +262,6 @@ fun JobPrepApp(
                     }
                 }
 
-                is Screen.LiveClassList -> {
-                    LiveClassScreen(
-                        classes = liveClasses,
-                        onJoinLiveRoom = { classId -> viewModel.navigateTo(Screen.LiveRoom(classId)) }
-                    )
-                }
-
-                is Screen.LiveRoom -> {
-                    val liveClass = liveClasses.find { it.id == screen.classId } ?: liveClasses.first()
-                    LiveRoomScreen(
-                        liveClass = liveClass,
-                        onLeaveRoom = { viewModel.navigateBack() }
-                    )
-                }
-
                 is Screen.Analytics -> {
                     AnalyticsScreen(
                         student = currentStudent,
@@ -283,20 +281,6 @@ fun JobPrepApp(
                     )
                 }
 
-                is Screen.Fees -> {
-                    FeesPaymentScreen(
-                        student = currentStudent,
-                        fees = feePayments,
-                        selectedFeeToPay = selectedFeeToPay,
-                        latestReceipt = latestReceipt,
-                        onOpenPayDialog = { fee -> viewModel.openPayDialog(fee) },
-                        onClosePayDialog = { viewModel.closePayDialog() },
-                        onProcessPayment = { method -> viewModel.processPayment(method) },
-                        onCloseReceipt = { viewModel.closeReceipt() },
-                        onBack = { viewModel.navigateBack() }
-                    )
-                }
-
                 is Screen.Admin -> {
                     AdminPanelScreen(
                         students = allStudents,
@@ -305,12 +289,18 @@ fun JobPrepApp(
                         onToggleStudentApproval = { stdId, approved ->
                             viewModel.setStudentApproval(stdId, approved)
                         },
+                        onToggleAdminRole = { stdId ->
+                            viewModel.toggleAdminRole(stdId)
+                        },
                         onTogglePdfLock = { pdfId -> viewModel.togglePdfLock(pdfId) },
                         onCreateMockTest = { title, cat, dur, neg, mark, qs ->
                             viewModel.createMockTest(title, cat, dur, neg, mark, qs)
                         },
                         onAddQuestionToTest = { testId, question ->
                             viewModel.addQuestionToMockTest(testId, question)
+                        },
+                        onBatchAddQuestions = { testId, questions ->
+                            viewModel.addQuestionsBatchToMockTest(testId, questions)
                         },
                         onDeleteMockTest = { testId -> viewModel.deleteMockTest(testId) },
                         onToggleMockTestLock = { testId -> viewModel.toggleMockTestLock(testId) },
@@ -320,10 +310,41 @@ fun JobPrepApp(
                     )
                 }
 
+                is Screen.PhoneAuth -> {
+                    PhoneAuthScreen(
+                        currentStudent = currentStudent,
+                        allStudents = allStudents,
+                        onRegister = { name, phone, exam ->
+                            viewModel.registerWithPhone(name, phone, exam)
+                        },
+                        onSwitchUser = { stdId ->
+                            viewModel.switchToStudent(stdId)
+                        },
+                        onOpenAdmin = {
+                            viewModel.toggleAdminMode()
+                        },
+                        onContinueToApp = {
+                            viewModel.navigateTo(Screen.Home)
+                        }
+                    )
+                }
+
                 is Screen.AiChatbot -> {
                     AiChatbotScreen(
                         language = appLanguage,
                         onBack = { viewModel.navigateBack() }
+                    )
+                }
+
+                else -> {
+                    HomeScreen(
+                        student = currentStudent,
+                        isAdminMode = isAdminMode,
+                        routines = examRoutines,
+                        notices = notices,
+                        attempts = testAttempts,
+                        onNavigate = { viewModel.navigateTo(it) },
+                        onStartMockTest = { testId -> viewModel.startMockTest(testId) }
                     )
                 }
             }

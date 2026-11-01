@@ -25,6 +25,7 @@ sealed class Screen {
     data object AiChatbot : Screen()
     data object Fees : Screen()
     data object Admin : Screen()
+    data object PhoneAuth : Screen()
 }
 
 class JobPrepViewModel(
@@ -70,6 +71,10 @@ class JobPrepViewModel(
 
     private val _timeRemainingSeconds = MutableStateFlow(0)
     val timeRemainingSeconds: StateFlow<Int> = _timeRemainingSeconds.asStateFlow()
+
+    // Per-question individual timer tracker (tracks seconds spent on each question)
+    private val _perQuestionTimeSeconds = MutableStateFlow<Map<Int, Int>>(emptyMap())
+    val perQuestionTimeSeconds: StateFlow<Map<Int, Int>> = _perQuestionTimeSeconds.asStateFlow()
 
     private val _examViolationStrikes = MutableStateFlow(0)
     val examViolationStrikes: StateFlow<Int> = _examViolationStrikes.asStateFlow()
@@ -143,6 +148,7 @@ class JobPrepViewModel(
         _activeMockTest.value = test
         _currentQuestionIndex.value = 0
         _selectedAnswers.value = emptyMap()
+        _perQuestionTimeSeconds.value = emptyMap()
         _examViolationStrikes.value = 0
         _violationWarningDialogVisible.value = false
         totalExamDurationSeconds = test.durationMinutes * 60
@@ -155,6 +161,12 @@ class JobPrepViewModel(
                 delay(1000L)
                 _timeRemainingSeconds.value -= 1
                 timeSpentSeconds += 1
+                // Increment individual timer for the currently viewed question
+                val qIdx = _currentQuestionIndex.value
+                _perQuestionTimeSeconds.update { map ->
+                    val prev = map[qIdx] ?: 0
+                    map + (qIdx to prev + 1)
+                }
             }
             // Auto submit when time expires!
             submitExam(isAutoSubmit = true)
@@ -199,7 +211,7 @@ class JobPrepViewModel(
         _violationWarningDialogVisible.value = false
     }
 
-    // Submit Exam
+    // Submit Exam with overall time and individual question times
     fun submitExam(isAutoSubmit: Boolean = false, isForceDisqualified: Boolean = false) {
         examTimerJob?.cancel()
         val test = _activeMockTest.value ?: return
@@ -207,10 +219,59 @@ class JobPrepViewModel(
             mockTest = test,
             answers = _selectedAnswers.value,
             timeSpentSeconds = timeSpentSeconds,
+            questionTimeSeconds = _perQuestionTimeSeconds.value,
             violationStrikes = _examViolationStrikes.value
         )
         _lastAttemptResult.value = attempt
         _currentScreen.value = Screen.ExamResult(attempt.attemptId, test.id)
+    }
+
+    // WhatsApp-like Phone Registration & Admin Approval
+    fun registerWithPhone(name: String, phone: String, targetExam: String) {
+        repository.registerStudentWithPhone(name, phone, targetExam)
+    }
+
+    fun approveStudent(studentId: String) {
+        repository.approveStudent(studentId)
+    }
+
+    fun rejectStudent(studentId: String) {
+        repository.rejectStudent(studentId)
+    }
+
+    // Admin Profile & Registration
+    fun registerOrUpdateAdmin(name: String, phone: String) {
+        repository.registerOrUpdateAdmin(name, phone)
+    }
+
+    // Individual Student Permissions (Mock Test & PDF)
+    fun toggleMockTestPermission(studentId: String) {
+        repository.toggleMockTestPermission(studentId)
+    }
+
+    fun togglePdfPermission(studentId: String) {
+        repository.togglePdfPermission(studentId)
+    }
+
+    fun grantAllMockTestPermission(grant: Boolean) {
+        repository.grantAllMockTestPermission(grant)
+    }
+
+    fun grantAllPdfPermission(grant: Boolean) {
+        repository.grantAllPdfPermission(grant)
+    }
+
+    // WhatsApp Group Admin style: Individually make any student Admin or dismiss Admin
+    fun toggleAdminRole(studentId: String) {
+        repository.toggleAdminRole(studentId)
+    }
+
+    fun switchToStudent(studentId: String) {
+        repository.switchToStudent(studentId)
+    }
+
+    fun addQuestionsBatchToMockTest(testId: String, questions: List<MockQuestion>) {
+        repository.addQuestionsBatchToMockTest(testId, questions)
     }
 
     fun openReviewMode(attemptId: String, testId: String) {

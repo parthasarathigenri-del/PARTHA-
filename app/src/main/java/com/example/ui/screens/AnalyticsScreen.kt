@@ -63,14 +63,25 @@ fun AnalyticsScreen(
         ((totalCorrect.toDouble() / (totalCorrect + totalIncorrect)) * 100).toInt()
     } else 0
 
-    // Leaderboard entries linked to real student models
-    val leaderboard = listOf(
-        LeaderboardEntry(1, allStudents.getOrElse(1) { student }, 28.5, 4),
-        LeaderboardEntry(2, student, 26.25, attempts.size + 2, isCurrentUser = true),
-        LeaderboardEntry(3, allStudents.getOrElse(2) { student }, 24.0, 3),
-        LeaderboardEntry(4, allStudents.getOrElse(4) { student }, 21.75, 3),
-        LeaderboardEntry(5, allStudents.getOrElse(5) { student }, 18.5, 2)
-    )
+    // Dynamic Leaderboard generated from real attempts
+    val leaderboard = if (attempts.isNotEmpty()) {
+        attempts.groupBy { it.studentId }.mapValues { entry ->
+            val stdAttempts = entry.value
+            val bestScore = stdAttempts.maxOf { it.score }
+            val std = allStudents.find { it.id == entry.key } ?: student
+            Triple(std, bestScore, stdAttempts.size)
+        }.values.sortedByDescending { it.second }.mapIndexed { index, triple ->
+            LeaderboardEntry(
+                rank = index + 1,
+                student = triple.first,
+                score = triple.second,
+                testsAttempted = triple.third,
+                isCurrentUser = triple.first.id == student.id
+            )
+        }
+    } else {
+        emptyList<LeaderboardEntry>()
+    }
 
     Column(
         modifier = Modifier
@@ -376,6 +387,23 @@ fun AnalyticsScreen(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
+                            }
+                        }
+                    }
+
+                    if (leaderboard.isEmpty()) {
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "এখনও কোনো শিক্ষার্থী মক টেস্ট সম্পন্ন করেনি। শিক্ষার্থীরা পরীক্ষা দিলে এখানে মেধা তালিকা ও র্যাঙ্ক দেখা যাবে।",
+                                    modifier = Modifier.padding(16.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }

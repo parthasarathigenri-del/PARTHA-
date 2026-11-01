@@ -19,8 +19,12 @@ data class Student(
     val targetExam: String,
     val phone: String,
     val isApproved: Boolean = true,
+    val isAdmin: Boolean = false,
+    val canAccessMockTests: Boolean = false,
+    val canAccessPdfs: Boolean = false,
+    val registrationDate: String = "আজ",
     val activeTimeSeconds: Long = 18450L,
-    val batch: String = "সফলতা ব্যাচ ২০২৬",
+    val batch: String = "কম্পিটিটিভ পাঠশালা ব্যাচ",
     val avatarUrl: String? = null,
     val scoresHistory: List<Double> = listOf(55.0, 62.0, 70.0, 78.5, 84.0)
 ) {
@@ -80,26 +84,26 @@ data class MockQuestion(
 ) {
     fun getQuestionText(lang: AppLanguage): String = when (lang) {
         AppLanguage.BENGALI -> questionBengali
-        AppLanguage.ENGLISH -> questionEnglish
-        AppLanguage.HINDI -> questionHindi
+        AppLanguage.ENGLISH -> questionEnglish.ifBlank { questionBengali }
+        AppLanguage.HINDI -> questionHindi.ifBlank { questionBengali }
     }
 
     fun getOptions(lang: AppLanguage): List<String> = when (lang) {
         AppLanguage.BENGALI -> optionsBengali
-        AppLanguage.ENGLISH -> optionsEnglish
-        AppLanguage.HINDI -> optionsHindi
+        AppLanguage.ENGLISH -> if (optionsEnglish.isNotEmpty() && optionsEnglish.any { it.isNotBlank() }) optionsEnglish else optionsBengali
+        AppLanguage.HINDI -> if (optionsHindi.isNotEmpty() && optionsHindi.any { it.isNotBlank() }) optionsHindi else optionsBengali
     }
 
     fun getExplanation(lang: AppLanguage): String = when (lang) {
         AppLanguage.BENGALI -> explanationBengali
-        AppLanguage.ENGLISH -> explanationEnglish
-        AppLanguage.HINDI -> explanationHindi
+        AppLanguage.ENGLISH -> explanationEnglish.ifBlank { explanationBengali }
+        AppLanguage.HINDI -> explanationHindi.ifBlank { explanationBengali }
     }
 
     fun getSubject(lang: AppLanguage): String = when (lang) {
         AppLanguage.BENGALI -> subjectBengali
-        AppLanguage.ENGLISH -> subjectEnglish
-        AppLanguage.HINDI -> subjectHindi
+        AppLanguage.ENGLISH -> subjectEnglish.ifBlank { subjectBengali }
+        AppLanguage.HINDI -> subjectHindi.ifBlank { subjectBengali }
     }
 }
 
@@ -121,14 +125,14 @@ data class MockTest(
 ) {
     fun getTitle(lang: AppLanguage): String = when (lang) {
         AppLanguage.BENGALI -> titleBengali
-        AppLanguage.ENGLISH -> titleEnglish
-        AppLanguage.HINDI -> titleHindi
+        AppLanguage.ENGLISH -> titleEnglish.ifBlank { titleBengali }
+        AppLanguage.HINDI -> titleHindi.ifBlank { titleBengali }
     }
 
     fun getDescription(lang: AppLanguage): String = when (lang) {
         AppLanguage.BENGALI -> descriptionBengali
-        AppLanguage.ENGLISH -> descriptionEnglish
-        AppLanguage.HINDI -> descriptionHindi
+        AppLanguage.ENGLISH -> descriptionEnglish.ifBlank { descriptionBengali }
+        AppLanguage.HINDI -> descriptionHindi.ifBlank { descriptionBengali }
     }
 }
 
@@ -146,6 +150,7 @@ data class TestAttempt(
     val unattemptedCount: Int,
     val negativeDeducted: Double,
     val timeSpentSeconds: Int,
+    val questionTimeSeconds: Map<Int, Int> = emptyMap(),
     val violationStrikes: Int,
     val completedAt: Long = System.currentTimeMillis()
 )

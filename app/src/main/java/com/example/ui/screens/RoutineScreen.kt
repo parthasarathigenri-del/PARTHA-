@@ -123,6 +123,28 @@ fun RoutineScreen(
             }
         }
 
+        if (filteredRoutines.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.EventBusy, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+                        Text("কোনো পরীক্ষার রুটিন নির্ধারিত নেই", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("অ্যাডমিন প্যানেল থেকে নতুন পরীক্ষার রুটিন যোগ করুন।", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+
         items(filteredRoutines) { routine ->
             Card(
                 modifier = Modifier

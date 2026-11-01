@@ -33,7 +33,6 @@ fun SankalpTopAppBar(
     onAdminToggle: () -> Unit,
     onOpenChat: () -> Unit,
     onOpenAiChat: () -> Unit,
-    onOpenFees: () -> Unit,
     canNavigateBack: Boolean,
     onBackClick: () -> Unit
 ) {
@@ -49,10 +48,10 @@ fun SankalpTopAppBar(
                     maxLines = 1
                 )
                 Text(
-                    text = if (isAdminMode) "অ্যাডমিন মোড (প্রফেসর অমিত সেন)" else when (language) {
-                        AppLanguage.BENGALI -> "সংকল্প একাডেমি - চাকরির প্রস্তুতি"
-                        AppLanguage.ENGLISH -> "Sankalp Academy - Job Prep"
-                        AppLanguage.HINDI -> "संकल्प अकादमी - सरकारी नौकरी तैयारी"
+                    text = if (isAdminMode) "অ্যাডমিন প্যানেল" else when (language) {
+                        AppLanguage.BENGALI -> "কম্পিটিটিভ পাঠশালা - চাকরির প্রস্তুতি"
+                        AppLanguage.ENGLISH -> "Competitive Pathshala - Job Prep"
+                        AppLanguage.HINDI -> "कम्पेटिटिव पाठशाला - सरकारी नौकरी तैयारी"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isAdminMode) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -165,14 +164,6 @@ fun SankalpTopAppBar(
                 }
             }
 
-            // Fee Payment button
-            IconButton(onClick = onOpenFees, modifier = Modifier.testTag("top_fees_button")) {
-                Icon(
-                    imageVector = Icons.Default.AccountBalanceWallet,
-                    contentDescription = "অনলাইন ফি পেমেন্ট"
-                )
-            }
-
             // Admin switch button
             FilterChip(
                 selected = isAdminMode,
@@ -231,23 +222,23 @@ fun SankalpBottomNavigation(
         ),
         NavItem(
             when (language) {
-                AppLanguage.BENGALI -> "লাইব্রেরি"
-                AppLanguage.ENGLISH -> "Library"
-                AppLanguage.HINDI -> "लाइब्रेरी"
+                AppLanguage.BENGALI -> "পিডিএফ"
+                AppLanguage.ENGLISH -> "PDF Library"
+                AppLanguage.HINDI -> "पीडीएफ"
             },
-            Icons.Filled.MenuBook,
-            Icons.Outlined.MenuBook,
+            Icons.Filled.PictureAsPdf,
+            Icons.Outlined.PictureAsPdf,
             Screen.Library
         ),
         NavItem(
             when (language) {
-                AppLanguage.BENGALI -> "লাইভ ক্লাস"
-                AppLanguage.ENGLISH -> "Live Class"
-                AppLanguage.HINDI -> "लाइव क्लास"
+                AppLanguage.BENGALI -> "রুটিন"
+                AppLanguage.ENGLISH -> "Routine"
+                AppLanguage.HINDI -> "रूटीन"
             },
-            Icons.Filled.VideoCameraFront,
-            Icons.Outlined.VideoCameraFront,
-            Screen.LiveClassList
+            Icons.Filled.CalendarMonth,
+            Icons.Outlined.CalendarMonth,
+            Screen.Routine
         ),
         NavItem(
             when (language) {
@@ -271,7 +262,7 @@ fun SankalpBottomNavigation(
                 is Screen.Home -> currentScreen is Screen.Home
                 is Screen.MockTests -> currentScreen is Screen.MockTests || currentScreen is Screen.ActiveExam || currentScreen is Screen.ExamResult || currentScreen is Screen.ExamReview
                 is Screen.Library -> currentScreen is Screen.Library || currentScreen is Screen.PdfViewer
-                is Screen.LiveClassList -> currentScreen is Screen.LiveClassList || currentScreen is Screen.LiveRoom
+                is Screen.Routine -> currentScreen is Screen.Routine
                 is Screen.Analytics -> currentScreen is Screen.Analytics
                 else -> false
             }

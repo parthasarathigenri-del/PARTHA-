@@ -40,20 +40,6 @@ fun HomeScreen(
     onNavigate: (Screen) -> Unit,
     onStartMockTest: (String) -> Unit
 ) {
-    // Countdown state for upcoming exam (e.g. 50 days from now)
-    var remainingMillis by remember { mutableLongStateOf(4320000000L) } // ~50 days
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000L)
-            remainingMillis -= 1000L
-        }
-    }
-
-    val days = remainingMillis / (1000 * 60 * 60 * 24)
-    val hours = (remainingMillis / (1000 * 60 * 60)) % 24
-    val minutes = (remainingMillis / (1000 * 60)) % 60
-    val seconds = (remainingMillis / 1000) % 60
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -163,65 +149,6 @@ fun HomeScreen(
             }
         }
 
-        // 2. Exam Countdown Timer Card
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("countdown_timer_card"),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = AccentAmber.copy(alpha = 0.15f),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.HourglassTop,
-                                    contentDescription = null,
-                                    tint = AccentAmber,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        Column {
-                            Text(
-                                text = "WBCS 2026 প্রিলিমিনারি পরীক্ষা কাউন্টডাউন",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "নির্দিষ্ট সময়সীমার মধ্যে প্রতিটি মক টেস্ট শেষ করুন",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // 4-box countdown timer (Days, Hours, Mins, Secs)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        CountdownUnitBox(value = "$days", label = "দিন (Days)")
-                        CountdownUnitBox(value = "$hours", label = "ঘণ্টা (Hours)")
-                        CountdownUnitBox(value = "$minutes", label = "মিনিট (Mins)")
-                        CountdownUnitBox(value = "$seconds", label = "সেকেন্ড (Secs)")
-                    }
-                }
-            }
-        }
 
         // 3. Quick Action Feature Grid
         item {
@@ -240,15 +167,15 @@ fun HomeScreen(
                 ) {
                     QuickActionTile(
                         title = "মক টেস্ট",
-                        subtitle = "নেগেটিভ মার্কিং ও সুরক্ষিত মোড",
+                        subtitle = "টাইমার ও প্রশ্নভিত্তিক সময় ট্র্যাকিং",
                         icon = Icons.Default.Quiz,
                         accentColor = PrimaryBlue,
                         modifier = Modifier.weight(1f),
                         onClick = { onNavigate(Screen.MockTests) }
                     )
                     QuickActionTile(
-                        title = "শিডিউলড পিডিএফ",
-                        subtitle = "লকডাউন প্রশ্নপত্র ও ওএমআর",
+                        title = "বিষয়ভিত্তিক পিডিএফ",
+                        subtitle = "ইতিহাস, ভূগোল, সায়েন্স, অঙ্ক, সংবিধান",
                         icon = Icons.Default.PictureAsPdf,
                         accentColor = CrimsonRed,
                         modifier = Modifier.weight(1f),
@@ -260,20 +187,20 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     QuickActionTile(
-                        title = "সরাসরি লাইভ ক্লাস",
-                        subtitle = "ভিডিও কনফারেন্সিং ও নোটস",
-                        icon = Icons.Default.VideoCameraFront,
+                        title = "পরীক্ষার রুটিন",
+                        subtitle = "আসন্ন মক টেস্ট ও পূর্ণাঙ্গ সময়সূচী",
+                        icon = Icons.Default.CalendarMonth,
                         accentColor = EmeraldGreen,
                         modifier = Modifier.weight(1f),
-                        onClick = { onNavigate(Screen.LiveClassList) }
+                        onClick = { onNavigate(Screen.Routine) }
                     )
                     QuickActionTile(
-                        title = "শিক্ষকের চ্যাট",
-                        subtitle = "সন্দেহ দূরীকরণ ও ফাইল শেয়ার",
-                        icon = Icons.Default.Chat,
+                        title = "WhatsApp রেজিস্ট্রেশন",
+                        subtitle = "ফোন নম্বর যাচাই ও অনুমোদন স্থিতি",
+                        icon = Icons.Default.PhoneAndroid,
                         accentColor = AccentAmber,
                         modifier = Modifier.weight(1f),
-                        onClick = { onNavigate(Screen.Chat) }
+                        onClick = { onNavigate(Screen.PhoneAuth) }
                     )
                 }
                 Row(
@@ -281,26 +208,13 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     QuickActionTile(
-                        title = "AI চ্যাটবট গুরু",
-                        subtitle = "২৪x৭ স্টাডি ডাউট সলভার",
-                        icon = Icons.Default.SmartToy,
-                        accentColor = AccentAmber,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigate(Screen.AiChatbot) }
-                    )
-                    QuickActionTile(
-                        title = "অনলাইন ফি জমা",
-                        subtitle = "UPI গেটওয়ে ও ডিজিটাল রসিদ",
-                        icon = Icons.Default.AccountBalanceWallet,
+                        title = "অ্যাডমিন প্যানেল",
+                        subtitle = "PDF প্রশ্ন আপলোড ও অ্যাডমিন রোল",
+                        icon = Icons.Default.AdminPanelSettings,
                         accentColor = Color(0xFF8B5CF6),
                         modifier = Modifier.weight(1f),
-                        onClick = { onNavigate(Screen.Fees) }
+                        onClick = { onNavigate(Screen.Admin) }
                     )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
                     QuickActionTile(
                         title = "পারফরম্যান্স রিপোর্ট",
                         subtitle = "স্কোরকার্ড ও লিডারবোর্ড",
@@ -327,6 +241,28 @@ fun HomeScreen(
                 )
                 TextButton(onClick = { onNavigate(Screen.MockTests) }) {
                     Text("সব দেখুন")
+                }
+            }
+        }
+
+        if (routines.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.EventNote, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Column {
+                            Text("বর্তমানে কোনো পরীক্ষার রুটিন নির্ধারিত নেই", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                            Text("অ্যাডমিন প্যানেল থেকে টেস্ট তৈরি করলে এখানে সময়সূচি যুক্ত হবে।", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
         }
@@ -573,34 +509,6 @@ fun HomeScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun CountdownUnitBox(value: String, label: String) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.width(72.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +39,7 @@ fun ExamReviewScreen(
     attempt: TestAttempt,
     mockTest: MockTest?,
     language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit = {},
     onAskTeacher: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -47,16 +50,19 @@ fun ExamReviewScreen(
     var followUpDoubtText by remember { mutableStateOf("") }
     val followUpAnswers = remember { mutableStateMapOf<Int, String>() }
 
+    var currentReviewLanguage by remember(language) { mutableStateOf(language) }
+    var showLanguageDropdown by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
-                            text = when (language) {
-                                AppLanguage.BENGALI -> "উত্তর ও সমাধান পর্যালোচনা (Preview)"
-                                AppLanguage.ENGLISH -> "Review Answers & Solutions (Preview)"
-                                AppLanguage.HINDI -> "उत्तर व व्याख्या समीक्षा (Preview)"
+                            text = when (currentReviewLanguage) {
+                                AppLanguage.BENGALI -> "উত্তর ও সমাধান পর্যালোচনা"
+                                AppLanguage.ENGLISH -> "Review Answers & Solutions"
+                                AppLanguage.HINDI -> "उत्तर व व्याख्या समीक्षा"
                             },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
@@ -71,6 +77,84 @@ fun ExamReviewScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("review_back_btn")) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "ফিরে যান")
+                    }
+                },
+                actions = {
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable { showLanguageDropdown = true }
+                                .testTag("review_language_dropdown_btn")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Translate,
+                                    contentDescription = "Review Language",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = currentReviewLanguage.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = showLanguageDropdown,
+                            onDismissRequest = { showLanguageDropdown = false }
+                        ) {
+                            AppLanguage.entries.forEach { lang ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            if (currentReviewLanguage == lang) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = EmeraldGreen,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            } else {
+                                                Spacer(modifier = Modifier.size(16.dp))
+                                            }
+                                            Text(
+                                                text = when (lang) {
+                                                    AppLanguage.BENGALI -> "বাংলা (Bengali)"
+                                                    AppLanguage.ENGLISH -> "English (ইংরেজি)"
+                                                    AppLanguage.HINDI -> "हिन्दी (Hindi)"
+                                                },
+                                                fontWeight = if (currentReviewLanguage == lang) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        currentReviewLanguage = lang
+                                        onLanguageChange(lang)
+                                        showLanguageDropdown = false
+                                    },
+                                    modifier = Modifier.testTag("review_menu_lang_${lang.code}")
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -138,10 +222,10 @@ fun ExamReviewScreen(
                 val isUnattempted = userChoice == null
 
                 val isExplainOpen = activeExplainQuestionIndex == qIndex
-                val questionText = q.getQuestionText(language)
-                val optionsList = q.getOptions(language)
-                val explanationText = q.getExplanation(language)
-                val subjectText = q.getSubject(language)
+                val questionText = q.getQuestionText(currentReviewLanguage)
+                val optionsList = q.getOptions(currentReviewLanguage)
+                val explanationText = q.getExplanation(currentReviewLanguage)
+                val subjectText = q.getSubject(currentReviewLanguage)
 
                 Card(
                     modifier = Modifier
@@ -184,17 +268,36 @@ fun ExamReviewScreen(
                                 else -> "✗ ভুল উত্তর (-০.২৫)"
                             }
 
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = statusBg.copy(alpha = 0.15f)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(
-                                    text = statusText,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = statusBg
-                                )
+                                val qTime = attempt.questionTimeSeconds[qIndex] ?: 0
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Text(
+                                        text = "⏱️ ${qTime} সে",
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = statusBg.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = statusText,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = statusBg
+                                    )
+                                }
                             }
                         }
 

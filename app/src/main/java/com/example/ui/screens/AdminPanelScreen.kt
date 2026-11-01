@@ -35,6 +35,63 @@ import com.example.ui.theme.Navy800
 import com.example.ui.theme.Navy900
 import com.example.ui.theme.PrimaryBlue
 
+fun parseQuestionsFromRawText(text: String, defaultSubject: String = "সাধারণ জ্ঞান"): List<MockQuestion> {
+    val questions = mutableListOf<MockQuestion>()
+    val questionBlocks = text.split(Regex("(?m)^(?=[0-9]+[.)]|১|২|৩|৪|৫|৬|৭|৮|৯|[0-9]+|Q[0-9]+[.:]|Question\\s*[0-9]+)")).filter { it.isNotBlank() }
+
+    questionBlocks.forEachIndexed { idx, block ->
+        val lines = block.lines().map { it.trim() }.filter { it.isNotBlank() }
+        if (lines.isNotEmpty()) {
+            val qLine = lines[0].replace(Regex("^[0-9]+[.)]|১|২|৩|৪|৫|৬|৭|৮|৯|[0-9]+|Q[0-9]+[.:]|Question\\s*[0-9]+[.:]?"), "").trim()
+            val options = mutableListOf<String>()
+            var correctIdx = 0
+            var explanation = ""
+
+            for (line in lines.drop(1)) {
+                if (line.matches(Regex("^[A-Da-d][.)]|\\([A-Da-d]\\)|^[ক-ঘ][.)]|\\([ক-ঘ]\\).*"))) {
+                    val opt = line.replace(Regex("^[A-Da-d][.)]|\\([A-Da-d]\\)|^[ক-ঘ][.)]|\\([ক-ঘ]\\)"), "").trim()
+                    options.add(opt)
+                } else if (line.contains("Ans", ignoreCase = true) || line.contains("উত্তর", ignoreCase = true)) {
+                    val ansLetter = line.uppercase()
+                    correctIdx = when {
+                        ansLetter.contains("A") || ansLetter.contains("ক") -> 0
+                        ansLetter.contains("B") || ansLetter.contains("খ") -> 1
+                        ansLetter.contains("C") || ansLetter.contains("গ") -> 2
+                        ansLetter.contains("D") || ansLetter.contains("ঘ") -> 3
+                        else -> 0
+                    }
+                } else if (line.contains("ব্যাখ্যা", ignoreCase = true) || line.contains("Exp", ignoreCase = true)) {
+                    explanation = line.replace(Regex("^(ব্যাখ্যা|Explanation|Exp)[.:]?"), "").trim()
+                }
+            }
+
+            while (options.size < 4) {
+                options.add("বিকল্প ${options.size + 1}")
+            }
+
+            questions.add(
+                MockQuestion(
+                    id = idx + 1,
+                    questionBengali = qLine,
+                    questionEnglish = qLine,
+                    questionHindi = qLine,
+                    optionsBengali = options.take(4),
+                    optionsEnglish = options.take(4),
+                    optionsHindi = options.take(4),
+                    correctOptionIndex = correctIdx.coerceIn(0, 3),
+                    explanationBengali = explanation.ifBlank { "সঠিক উত্তরটি যাচাই করা হয়েছে।" },
+                    explanationEnglish = explanation.ifBlank { "Verified." },
+                    explanationHindi = explanation.ifBlank { "सत्यापित।" },
+                    subjectBengali = defaultSubject,
+                    subjectEnglish = defaultSubject,
+                    subjectHindi = defaultSubject
+                )
+            )
+        }
+    }
+    return questions
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminPanelScreen(
@@ -42,9 +99,11 @@ fun AdminPanelScreen(
     pdfBooks: List<PdfBook>,
     mockTests: List<MockTest>,
     onToggleStudentApproval: (String, Boolean) -> Unit,
+    onToggleAdminRole: (String) -> Unit = {},
     onTogglePdfLock: (String) -> Unit,
     onCreateMockTest: (title: String, category: String, durationMinutes: Int, negativeMark: Double, markPerCorrect: Double, questions: List<MockQuestion>) -> MockTest,
     onAddQuestionToTest: (testId: String, question: MockQuestion) -> Unit,
+    onBatchAddQuestions: (testId: String, List<MockQuestion>) -> Unit = { _, _ -> },
     onDeleteMockTest: (String) -> Unit,
     onToggleMockTestLock: (String) -> Unit,
     onAddPdfBook: (PdfBook) -> Unit,
@@ -52,7 +111,7 @@ fun AdminPanelScreen(
     onBack: () -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("পরীক্ষা ও প্রশ্ন আপলোড", "শিক্ষার্থী এক্সেস", "পিডিএফ লক ম্যানেজার", "উপস্থিতি ও সক্রিয়তা")
+    val tabs = listOf("প্রশ্ন ও মক টেস্ট", "পিডিএফ থেকে প্রশ্ন আপলোড", "রেজিস্ট্রেশন ও WhatsApp অ্যাডমিন", "পিডিএফ লক ম্যানেজার", "সক্রিয়তা")
 
     var selectedStudentGraph by remember { mutableStateOf<Student?>(null) }
     var showCreateTestDialog by remember { mutableStateOf(false) }
@@ -83,6 +142,11 @@ fun AdminPanelScreen(
 
     // Expandable questions accordion in test list
     var expandedTestId by remember { mutableStateOf<String?>(null) }
+
+    // Direct PDF/Text Question Upload State
+    var pdfRawText by remember { mutableStateOf("") }
+    var parsedPdfQuestions by remember { mutableStateOf<List<MockQuestion>>(emptyList()) }
+    var pdfBatchSuccessMsg by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -454,26 +518,25 @@ fun AdminPanelScreen(
                                     ) {
                                         OutlinedButton(
                                             onClick = {
-                                                // Pre-fill sample question
-                                                questionText = "ভারতের সংবিধানের কত নম্বর ধারায় সুপ্রিম কোর্টে রিট জারির ক্ষমতা (Right to Constitutional Remedies) বর্ণিত রয়েছে?"
-                                                optionA = "ধারা ১৯"
-                                                optionB = "ধারা ২১"
-                                                optionC = "ধারা ৩২"
-                                                optionD = "ধারা ২২৬"
-                                                selectedCorrectOption = 2
-                                                explanationText = "সংবিধানের ৩২ নম্বর অনুচ্ছেদকে ড. বি আর আম্বেদকর 'সংবিধানের হৃদয় ও আত্মা' (Heart and Soul of the Constitution) বলে অভিহিত করেছিলেন।"
-                                                subjectTag = "ভারতের সংবিধান ও রাজনীতি"
+                                                // Reset question fields
+                                                questionText = ""
+                                                optionA = ""
+                                                optionB = ""
+                                                optionC = ""
+                                                optionD = ""
+                                                explanationText = ""
+                                                selectedCorrectOption = 0
                                             },
                                             shape = RoundedCornerShape(10.dp),
                                             modifier = Modifier.weight(1f)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.AutoFixHigh,
+                                                imageVector = Icons.Default.Refresh,
                                                 contentDescription = null,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("নমুনা লোড", fontSize = 11.sp)
+                                            Text("ফিল্ড মুছুন", fontSize = 11.sp)
                                         }
 
                                         Button(
@@ -724,31 +787,331 @@ fun AdminPanelScreen(
                     }
 
                     1 -> {
-                        // TAB 1: Student Permission & Access Whitelist
+                        // TAB 1: Direct Question Upload from PDF / Text
+                        item {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("pdf_question_importer_card"),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(18.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = PrimaryBlue.copy(alpha = 0.15f),
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PictureAsPdf,
+                                                    contentDescription = null,
+                                                    tint = PrimaryBlue,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "পিডিএফ / টেক্সট থেকে সরাসরি প্রশ্ন আপলোড",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "পিডিএফ বা ওয়ার্ড ফাইলের প্রশ্নগুলো কপি করে এখানে পেস্ট করুন, সাথে সাথে প্রশ্ন তৈরি হয়ে যাবে",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    Divider()
+
+                                    // Mock Test target selection
+                                    Text(
+                                        text = "প্রশ্ন যুক্ত করার জন্য মক টেস্ট নির্বাচন করুন:",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        items(mockTests) { test ->
+                                            val isSelected = test.id == selectedTestIdForQuestion
+                                            FilterChip(
+                                                selected = isSelected,
+                                                onClick = { selectedTestIdForQuestion = test.id },
+                                                label = { Text(test.titleBengali, maxLines = 1) },
+                                                leadingIcon = if (isSelected) {
+                                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                                } else null
+                                            )
+                                        }
+                                    }
+
+                                    // Raw Text Area
+                                    OutlinedTextField(
+                                        value = pdfRawText,
+                                        onValueChange = { pdfRawText = it },
+                                        label = { Text("পিডিএফ প্রশ্ন পেস্ট করুন (Paste Questions from PDF)") },
+                                        placeholder = { Text("১. প্রশ্ন...\nA) বিকল্প ক\nB) বিকল্প খ\nC) বিকল্প গ\nD) বিকল্প ঘ\nউত্তর: B") },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(180.dp)
+                                            .testTag("pdf_raw_text_input"),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Button(
+                                            onClick = {
+                                                parsedPdfQuestions = parseQuestionsFromRawText(pdfRawText)
+                                                pdfBatchSuccessMsg = if (parsedPdfQuestions.isNotEmpty()) "${parsedPdfQuestions.size} টি প্রশ্ন সফলভাবে চিহ্নিত করা হয়েছে!" else "কোনো প্রশ্ন চিহ্নিত করা যায়নি। ফরম্যাট চেক করুন।"
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag("parse_questions_btn"),
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("প্রশ্ন এক্সট্র্যাক্ট করুন (Parse)")
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                pdfRawText = ""
+                                                parsedPdfQuestions = emptyList()
+                                                pdfBatchSuccessMsg = null
+                                            },
+                                            shape = RoundedCornerShape(10.dp)
+                                        ) {
+                                            Text("টেক্সট মুছুন")
+                                        }
+                                    }
+
+                                    if (pdfBatchSuccessMsg != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = EmeraldGreen.copy(alpha = 0.15f),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = pdfBatchSuccessMsg!!,
+                                                color = EmeraldGreen,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.padding(10.dp)
+                                            )
+                                        }
+                                    }
+
+                                    if (parsedPdfQuestions.isNotEmpty()) {
+                                        Button(
+                                            onClick = {
+                                                onBatchAddQuestions(selectedTestIdForQuestion, parsedPdfQuestions)
+                                                pdfBatchSuccessMsg = "🎉 ${parsedPdfQuestions.size} টি প্রশ্ন সফলভাবে মক টেস্টে যুক্ত করা হয়েছে!"
+                                                parsedPdfQuestions = emptyList()
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .testTag("upload_all_parsed_questions_btn"),
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("এক ক্লিকে সমস্ত প্রশ্ন মক টেস্টে যুক্ত করুন", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (parsedPdfQuestions.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "এক্সট্র্যাক্টকৃত প্রশ্নের প্রিভিউ (${parsedPdfQuestions.size} টি):",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            itemsIndexed(parsedPdfQuestions) { idx, q ->
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("${idx + 1}. ${q.questionBengali}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                        q.optionsBengali.forEachIndexed { optIdx, opt ->
+                                            val isCorrect = optIdx == q.correctOptionIndex
+                                            Text(
+                                                text = "${('A'.code + optIdx).toChar()}) $opt ${if (isCorrect) "✓ (সঠিক উত্তর)" else ""}",
+                                                fontSize = 11.sp,
+                                                color = if (isCorrect) EmeraldGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                        if (q.explanationBengali.isNotBlank()) {
+                                            Text("ব্যাখ্যা: ${q.explanationBengali}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    2 -> {
+                        // TAB 2: WhatsApp Registration Requests & Individual Make Admin Toggle
+                        val pendingStudents = students.filter { !it.isApproved }
+                        val approvedStudents = students.filter { it.isApproved }
+
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF075E54).copy(alpha = 0.1f))
                             ) {
                                 Row(
                                     modifier = Modifier.padding(14.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Icon(imageVector = Icons.Default.Security, contentDescription = null, tint = PrimaryBlue)
-                                    Text(
-                                        text = "শুধুমাত্র যে সকল ছাত্রছাত্রীকে আপনি অনুমোদন দেবেন তারাই অ্যাপের কনটেন্ট ও পরীক্ষা এক্সেস করতে পারবে। পারমিশন বন্ধ করলে তাৎক্ষণিক অ্যাক্সেস ব্লক হবে।",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 11.sp
-                                    )
+                                    Icon(imageVector = Icons.Default.Groups, contentDescription = null, tint = Color(0xFF075E54))
+                                    Column {
+                                        Text(
+                                            text = "WhatsApp স্টাইল সদস্য ও অ্যাডমিন নিয়ন্ত্রণ",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF075E54)
+                                        )
+                                        Text(
+                                            text = "নতুন ফোন রেজিস্ট্রেশন রিকোয়েস্ট এক্সেপ্ট করুন এবং গ্রুপ অ্যাডমিনের মতো যেকোনো শিক্ষার্থীকে ইন্ডিভিজুয়ালি অ্যাডমিন করুন।",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontSize = 11.sp
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        items(students) { student ->
+                        // Section 1: Pending Registration Requests
+                        item {
+                            Text(
+                                text = "অনুমোদনের অপেক্ষায় আবেদন (${pendingStudents.size} টি)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (pendingStudents.isNotEmpty()) CrimsonRed else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        if (pendingStudents.isEmpty()) {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "বর্তমানে কোনো নতুন পেন্ডিং রেজিস্ট্রেশন নেই। সকল আবেদন অনুমোদিত হয়েছে।",
+                                        modifier = Modifier.padding(14.dp),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        } else {
+                            items(pendingStudents) { student ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("pending_request_${student.id}"),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(student.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                                Text("ফোন: ${student.phone} • ${student.targetExam}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text("আবেদনের সময়: ${student.registrationDate}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = AccentAmber.copy(alpha = 0.15f)
+                                            ) {
+                                                Text("অপেক্ষারত", color = AccentAmber, fontWeight = FontWeight.Bold, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                            }
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Button(
+                                                onClick = { onToggleStudentApproval(student.id, true) },
+                                                colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .testTag("approve_btn_${student.id}")
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("এক্সেপ্ট (Approve)", fontSize = 11.sp)
+                                            }
+
+                                            OutlinedButton(
+                                                onClick = { onToggleStudentApproval(student.id, false) },
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .testTag("reject_btn_${student.id}")
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp), tint = CrimsonRed)
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("বাতিল (Reject)", fontSize = 11.sp, color = CrimsonRed)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Section 2: Approved Students & WhatsApp Make Admin
+                        item {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = "অনুমোদিত শিক্ষার্থী ও হোয়াটসঅ্যাপ অ্যাডমিন রোল (${approvedStudents.size} জন)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        items(approvedStudents) { student ->
                             Card(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("student_admin_card_${student.id}"),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -761,70 +1124,58 @@ fun AdminPanelScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
-                                            Text(
-                                                text = student.name,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Surface(
-                                                shape = RoundedCornerShape(6.dp),
-                                                color = if (student.isApproved) EmeraldGreen.copy(alpha = 0.15f) else CrimsonRed.copy(alpha = 0.15f)
-                                            ) {
-                                                Text(
-                                                    text = if (student.isApproved) "অনুমোদিত" else "ব্লকড",
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = if (student.isApproved) EmeraldGreen else CrimsonRed,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 10.sp
-                                                )
+                                            Text(student.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                            if (student.isAdmin) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = PrimaryBlue
+                                                ) {
+                                                    Text(
+                                                        text = "🛡️ গ্রুপ অ্যাডমিন",
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 10.sp
+                                                    )
+                                                }
                                             }
                                         }
                                         Text(
-                                            text = "রোল: ${student.rollNo} • লক্ষ্য: ${student.targetExam}",
+                                            text = "রোল: ${student.rollNo} • ফোন: ${student.phone}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Text(
-                                                text = "ফোন: ${student.phone}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            TextButton(
-                                                onClick = { selectedStudentGraph = student },
-                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                                            ) {
-                                                Icon(imageVector = Icons.Default.Timeline, contentDescription = null, modifier = Modifier.size(14.dp))
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text("পারফরম্যান্স গ্রাফ", fontSize = 11.sp)
-                                            }
-                                        }
+                                        Text(
+                                            text = "টার্গেট: ${student.targetExam}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
 
-                                    Switch(
-                                        checked = student.isApproved,
-                                        onCheckedChange = { approved ->
-                                            onToggleStudentApproval(student.id, approved)
-                                        },
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = EmeraldGreen,
-                                            checkedTrackColor = EmeraldGreen.copy(alpha = 0.5f)
-                                        ),
-                                        modifier = Modifier.testTag("admin_approval_switch_${student.id}")
-                                    )
+                                    // WhatsApp Group Admin style: Make Admin / Dismiss Admin
+                                    Button(
+                                        onClick = { onToggleAdminRole(student.id) },
+                                        colors = if (student.isAdmin) ButtonDefaults.buttonColors(containerColor = Color.DarkGray) else ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.testTag("toggle_admin_${student.id}")
+                                    ) {
+                                        Text(
+                                            text = if (student.isAdmin) "অ্যাডমিন সরান" else "মেক অ্যাডমিন",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    2 -> {
-                        // TAB 2: PDF Lock / Unlock Manager
+                    3 -> {
+                        // TAB 3: PDF Lock / Unlock Manager
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -890,8 +1241,8 @@ fun AdminPanelScreen(
                         }
                     }
 
-                    3 -> {
-                        // TAB 3: Attendance & Active Hours Report
+                    4 -> {
+                        // TAB 4: Attendance & Active Hours Report
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
