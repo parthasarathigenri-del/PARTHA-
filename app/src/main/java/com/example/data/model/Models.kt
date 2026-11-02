@@ -171,6 +171,7 @@ data class PdfBook(
     val isLocked: Boolean = false,
     val scheduledUnlockTime: String = "",
     val description: String = "",
+    val fileUri: String? = null,
     val samplePages: List<String> = emptyList()
 )
 

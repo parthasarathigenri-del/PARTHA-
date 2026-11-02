@@ -66,6 +66,26 @@ fun PdfViewerScreen(
                     }
                 },
                 actions = {
+                    if (pdf.fileUri != null) {
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        IconButton(
+                            onClick = {
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                        setDataAndType(android.net.Uri.parse(pdf.fileUri), "application/pdf")
+                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.OpenInNew,
+                                contentDescription = "Open in PDF App",
+                                tint = PrimaryBlue
+                            )
+                        }
+                    }
                     IconButton(onClick = { isNightMode = !isNightMode }) {
                         Icon(
                             imageVector = if (isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode,

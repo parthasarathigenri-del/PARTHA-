@@ -48,6 +48,55 @@ fun HomeScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // 0. Admin Quick Access Banner (Only shown to Institute Head / Admin)
+        if (student.isAdmin || student.phone.contains("8902720907")) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigate(Screen.Admin) }
+                        .testTag("admin_home_banner_card"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF6D28D9)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.2f),
+                            modifier = Modifier.size(46.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.AdminPanelSettings,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "👑 ইনস্টিটিউট অ্যাডমিন প্যানেল সক্রিয়",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "PDF আপলোড ও AI মক টেস্ট তৈরি করতে এখানে ট্যাপ করুন →",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 1. Profile / Institute Welcome Header
         item {
             Card(

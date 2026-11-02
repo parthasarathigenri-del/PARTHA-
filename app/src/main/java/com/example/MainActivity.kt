@@ -81,10 +81,18 @@ fun JobPrepApp(
                 viewModel.registerWithPhone(name, phone, exam)
             },
             onAdminLogin = { phone, pass ->
-                viewModel.loginAsAdmin(phone, pass)
+                val success = viewModel.loginAsAdmin(phone, pass)
+                if (success) {
+                    viewModel.navigateTo(Screen.Admin)
+                }
+                success
             },
             onContinueToApp = {
-                viewModel.navigateTo(Screen.Home)
+                if (isAdminMode || currentStudent.isAdmin) {
+                    viewModel.navigateTo(Screen.Admin)
+                } else {
+                    viewModel.navigateTo(Screen.Home)
+                }
             }
         )
         return
@@ -121,7 +129,12 @@ fun JobPrepApp(
                     onLanguageChange = { viewModel.setLanguage(it) },
                     isAdminMode = isAdminMode,
                     showAdminOption = currentStudent.isAdmin || isAdminMode,
-                    onAdminToggle = { viewModel.toggleAdminMode() },
+                    onAdminToggle = {
+                        if (!isAdminMode) {
+                            viewModel.toggleAdminMode()
+                        }
+                        viewModel.navigateTo(Screen.Admin)
+                    },
                     onOpenChat = { viewModel.navigateTo(Screen.Chat) },
                     onOpenAiChat = { viewModel.navigateTo(Screen.AiChatbot) },
                     canNavigateBack = canNavigateBack,
@@ -252,7 +265,9 @@ fun JobPrepApp(
                         books = pdfBooks,
                         isAdminMode = isAdminMode,
                         onToggleLock = { pdfId -> viewModel.togglePdfLock(pdfId) },
-                        onOpenPdf = { pdfId -> viewModel.navigateTo(Screen.PdfViewer(pdfId)) }
+                        onOpenPdf = { pdfId -> viewModel.navigateTo(Screen.PdfViewer(pdfId)) },
+                        onAddPdfBook = { pdf -> viewModel.addPdfBook(pdf) },
+                        onNavigateToAdmin = { viewModel.navigateTo(Screen.Admin) }
                     )
                 }
 
@@ -355,10 +370,18 @@ fun JobPrepApp(
                             viewModel.registerWithPhone(name, phone, exam)
                         },
                         onAdminLogin = { phone, pass ->
-                            viewModel.loginAsAdmin(phone, pass)
+                            val success = viewModel.loginAsAdmin(phone, pass)
+                            if (success) {
+                                viewModel.navigateTo(Screen.Admin)
+                            }
+                            success
                         },
                         onContinueToApp = {
-                            viewModel.navigateTo(Screen.Home)
+                            if (isAdminMode || currentStudent.isAdmin) {
+                                viewModel.navigateTo(Screen.Admin)
+                            } else {
+                                viewModel.navigateTo(Screen.Home)
+                            }
                         }
                     )
                 }

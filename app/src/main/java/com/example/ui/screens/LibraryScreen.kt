@@ -1,6 +1,10 @@
 package com.example.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -19,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,8 +48,34 @@ fun LibraryScreen(
     books: List<PdfBook>,
     isAdminMode: Boolean,
     onToggleLock: (String) -> Unit,
-    onOpenPdf: (String) -> Unit
+    onOpenPdf: (String) -> Unit,
+    onAddPdfBook: (PdfBook) -> Unit = {},
+    onNavigateToAdmin: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    var uploadPdfTitle by remember { mutableStateOf("") }
+    var uploadPdfCategory by remember { mutableStateOf("ইতিহাস") }
+    var uploadPdfPages by remember { mutableStateOf("25") }
+    var uploadPdfDescription by remember { mutableStateOf("") }
+    var selectedUploadFileUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedUploadFileName by remember { mutableStateOf<String?>(null) }
+    var selectedUploadFileSize by remember { mutableStateOf<String?>(null) }
+    var uploadToastMessage by remember { mutableStateOf<String?>(null) }
+
+    val libraryFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            selectedUploadFileUri = uri
+            val (name, size) = queryDeviceFileDetails(context, uri)
+            selectedUploadFileName = name
+            selectedUploadFileSize = size
+            uploadPdfTitle = name.substringBeforeLast(".")
+            uploadPdfDescription = "আমার ফোন স্টোরেজ থেকে আপলোডকৃত পিডিএফ নোটস ($name - $size)।"
+            uploadToastMessage = "📁 ফোন থেকে ফাইল সিলেক্ট হয়েছে: $name ($size)!"
+        }
+    }
+
     val subjectCategories = listOf(
         SubjectCategory("all", "সব বিষয়", "📚", PrimaryBlue),
         SubjectCategory("ইতিহাস", "ইতিহাস", "🏛️", Color(0xFFD97706)),
@@ -262,35 +293,221 @@ fun LibraryScreen(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.UploadFile, contentDescription = null, tint = PrimaryBlue)
-                    Text("পিডিএফ আপলোড প্যানেল")
+                    Text("পিডিএফ আপলোড ও সংযোজন")
                 }
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "শিক্ষক ও অ্যাডমিনরা সরাসরি অ্যাপ থেকে যেকোনো বিষয় (ইতিহাস, ভূগোল, সায়েন্স, রিজনিং, অঙ্ক, সংবিধান) অথবা শিডিউলড মক টেস্ট প্রশ্নপত্র আপলোড করতে পারেন।"
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 440.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item {
                         Text(
-                            text = "💡 টিপস: আপনি অ্যাডমিন প্যানেল থেকে টেক্সট কপি করে সরাসরি মক টেস্ট প্রশ্নমালাতেও রূপান্তর করতে পারেন।",
+                            text = "আপনার ফোন মেমোরি থেকে PDF আপলোড করুন অথবা নিচে প্রস্তুত করা যেকোনো টেস্ট ফাইল নির্বাচন করুন:",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(10.dp)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+
+                    // 1. Phone file manager picker (works on real phones after download)
+                    item {
+                        Button(
+                            onClick = {
+                                try {
+                                    libraryFilePicker.launch("application/pdf")
+                                } catch (_: Exception) {
+                                    libraryFilePicker.launch("*/*")
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("library_dialog_phone_picker_btn")
+                        ) {
+                            Icon(Icons.Default.PhoneAndroid, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (selectedUploadFileName != null) "অন্য PDF পরিবর্তন করুন" else "📱 আমার ফোনের ফাইল ম্যানেজার থেকে PDF বাছুন",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    // 2. Instant Pre-loaded Device/Demo PDF selector (works 100% in browser preview and on real phones)
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFF1F5F9),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(Icons.Default.Bolt, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(16.dp))
+                                    Text("⚡ ডিভাইস / ডেমো PDF (১-ক্লিকে লোড করুন):", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+                                listOf(
+                                    Triple("পশ্চিমবঙ্গ পুলিশ SI ও কনস্টেবল পূর্ণাঙ্গ গাইড ২০২৪.pdf", "জেনারেল স্টাডিজ", "35"),
+                                    Triple("ভারতের ইতিহাস ও জাতীয় আন্দোলন হ্যান্ডনোটস.pdf", "ইতিহাস", "48"),
+                                    Triple("পশ্চিমবঙ্গ ভূগোল ও নদনদী মানচিত্র হ্যান্ডবুক.pdf", "ভূগোল", "26"),
+                                    Triple("ভারতের সংবিধান ও মৌলিক অধিকার হ্যান্ডনোটস.pdf", "সংবিধান", "32")
+                                ).forEach { (sampleName, sampleCat, samplePages) ->
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (selectedUploadFileName == sampleName) EmeraldGreen.copy(alpha = 0.15f) else Color.White,
+                                        border = BorderStroke(1.dp, if (selectedUploadFileName == sampleName) EmeraldGreen else Color(0xFFE2E8F0)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedUploadFileName = sampleName
+                                                selectedUploadFileSize = "3.6 MB"
+                                                uploadPdfTitle = sampleName.substringBeforeLast(".")
+                                                uploadPdfCategory = sampleCat
+                                                uploadPdfPages = samplePages
+                                                uploadPdfDescription = "ইনস্টিটিউট লাইব্রেরির জন্য অনুমোদিত $sampleCat স্পেশাল পিডিএফ হ্যান্ডনোটস ($samplePages পৃষ্ঠা)।"
+                                                uploadToastMessage = "📁 ফাইল নির্বাচিত হয়েছে: $sampleName! নিচে 'পাবলিশ করুন' চাপুন।"
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = CrimsonRed, modifier = Modifier.size(16.dp))
+                                                Text(sampleName, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                                            }
+                                            Text(sampleCat, fontSize = 10.sp, color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (selectedUploadFileName != null) {
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = EmeraldGreen.copy(alpha = 0.15f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(16.dp))
+                                    Text(
+                                        text = "নির্বাচিত: $selectedUploadFileName (${selectedUploadFileSize ?: "3.5 MB"})",
+                                        color = EmeraldGreen,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Form Inputs
+                    item {
+                        OutlinedTextField(
+                            value = uploadPdfTitle,
+                            onValueChange = { uploadPdfTitle = it },
+                            label = { Text("পিডিএফ শিরোনাম (Title)") },
+                            placeholder = { Text("যেমন: সংবিধানের মৌলিক অধিকার নোটস") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = uploadPdfCategory,
+                                onValueChange = { uploadPdfCategory = it },
+                                label = { Text("বিষয়") },
+                                modifier = Modifier.weight(1.5f),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = uploadPdfPages,
+                                onValueChange = { uploadPdfPages = it.filter { ch -> ch.isDigit() } },
+                                label = { Text("পৃষ্ঠা") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = uploadPdfDescription,
+                            onValueChange = { uploadPdfDescription = it },
+                            label = { Text("সংক্ষিপ্ত বিবরণ") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 2
+                        )
+                    }
+
+                    if (uploadToastMessage != null) {
+                        item {
+                            Text(uploadToastMessage!!, color = EmeraldGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = { showUploadModal = false }) {
-                    Text("ফাইল নির্বাচন সম্পন্ন (OK)")
+                Button(
+                    onClick = {
+                        if (uploadPdfTitle.isNotBlank()) {
+                            val pages = uploadPdfPages.toIntOrNull() ?: 20
+                            val actualSize = selectedUploadFileSize ?: "${(pages * 0.15).toInt().coerceAtLeast(2)} MB"
+                            val book = PdfBook(
+                                id = "pdf_${System.currentTimeMillis()}",
+                                title = uploadPdfTitle,
+                                author = "কম্পিটিটিভ পাঠশালা ফ্যাকাল্টি",
+                                category = uploadPdfCategory,
+                                totalPages = pages,
+                                fileSize = actualSize,
+                                description = uploadPdfDescription.ifBlank { "ফোন স্টোরেজ থেকে আপলোডকৃত পিডিএফ নোটস।" },
+                                fileUri = selectedUploadFileUri?.toString(),
+                                isLocked = false,
+                                samplePages = listOf(
+                                    "অধ্যায় ১: $uploadPdfTitle সংক্রান্ত সারসংক্ষেপ ও গুরুত্বপূর্ণ তথ্যাবলী।\n\nফাইল নাম: ${selectedUploadFileName ?: uploadPdfTitle}\nসাইজ: $actualSize\nস্ট্যাটাস: অ্যাডমিন অনুমোদিত ও স্টুডেন্ট লাইব্রেরিতে উন্মুক্ত।"
+                                )
+                            )
+                            onAddPdfBook(book)
+                            showUploadModal = false
+                            uploadPdfTitle = ""
+                            uploadPdfDescription = ""
+                            selectedUploadFileUri = null
+                            selectedUploadFileName = null
+                        }
+                    },
+                    enabled = uploadPdfTitle.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                    modifier = Modifier.testTag("publish_pdf_from_library_btn")
+                ) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("লাইব্রেরিতে পাবলিশ করুন")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showUploadModal = false }) {
-                    Text("বাতিল")
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = {
+                        showUploadModal = false
+                        onNavigateToAdmin()
+                    }) {
+                        Text("অ্যাডমিন প্যানেল", color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = { showUploadModal = false }) {
+                        Text("বন্ধ করুন")
+                    }
                 }
             }
         )
