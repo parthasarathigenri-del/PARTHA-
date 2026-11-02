@@ -18,15 +18,20 @@ data class Student(
     val rollNo: String,
     val targetExam: String,
     val phone: String,
-    val isApproved: Boolean = true,
+    val isApproved: Boolean = false,
     val isAdmin: Boolean = false,
     val canAccessMockTests: Boolean = false,
     val canAccessPdfs: Boolean = false,
+    val approvedTestIds: List<String> = emptyList(), // Specific test IDs approved by admin
+    val completedTestIds: List<String> = emptyList(), // Tests already attempted that can be re-attempted freely
+    val isTestFrozen: Boolean = false,
+    val frozenTestId: String? = null,
+    val freezeReason: String = "",
     val registrationDate: String = "আজ",
-    val activeTimeSeconds: Long = 18450L,
+    val activeTimeSeconds: Long = 0L,
     val batch: String = "কম্পিটিটিভ পাঠশালা ব্যাচ",
     val avatarUrl: String? = null,
-    val scoresHistory: List<Double> = listOf(55.0, 62.0, 70.0, 78.5, 84.0)
+    val scoresHistory: List<Double> = emptyList()
 ) {
     val trend: PerformanceTrend
         get() {
@@ -212,3 +217,39 @@ data class InstituteNotice(
     val isUrgent: Boolean = false,
     val examTargetDateTimestamp: Long? = null
 )
+
+data class TestAccessRequest(
+    val id: String,
+    val studentId: String,
+    val studentName: String,
+    val studentPhone: String,
+    val mockTestId: String,
+    val mockTestTitle: String,
+    val requestedAt: String = "আজ",
+    val isApproved: Boolean = false
+)
+
+data class TestFreezeRecord(
+    val id: String,
+    val studentId: String,
+    val studentName: String,
+    val studentPhone: String,
+    val mockTestId: String,
+    val mockTestTitle: String,
+    val strikeCount: Int = 3,
+    val frozenAt: String = "এখনই",
+    val isUnfrozen: Boolean = false
+)
+
+data class LeaderboardEntry(
+    val rank: Int,
+    val studentName: String,
+    val rollNo: String,
+    val targetExam: String,
+    val score: Double,
+    val totalMarks: Int,
+    val accuracyPercent: Double,
+    val timeSpentSeconds: Int,
+    val mockTestTitle: String
+)
+

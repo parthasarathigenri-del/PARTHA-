@@ -30,6 +30,7 @@ fun SankalpTopAppBar(
     language: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     isAdminMode: Boolean,
+    showAdminOption: Boolean = false,
     onAdminToggle: () -> Unit,
     onOpenChat: () -> Unit,
     onOpenAiChat: () -> Unit,
@@ -40,12 +41,13 @@ fun SankalpTopAppBar(
 
     TopAppBar(
         title = {
-            Column {
+            Column(modifier = Modifier.padding(end = 4.dp)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
                     text = if (isAdminMode) "অ্যাডমিন প্যানেল" else when (language) {
@@ -54,6 +56,8 @@ fun SankalpTopAppBar(
                         AppLanguage.HINDI -> "कम्पेटिटिव पाठशाला - सरकारी नौकरी तैयारी"
                     },
                     style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     color = if (isAdminMode) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -164,28 +168,30 @@ fun SankalpTopAppBar(
                 }
             }
 
-            // Admin switch button
-            FilterChip(
-                selected = isAdminMode,
-                onClick = onAdminToggle,
-                label = {
-                    Text(
-                        text = if (isAdminMode) "অ্যাডমিন" else "ছাত্র",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = if (isAdminMode) Icons.Default.AdminPanelSettings else Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
-                },
-                modifier = Modifier
-                    .padding(end = 4.dp)
-                    .testTag("admin_role_chip")
-            )
+            // Admin switch button - only visible if authorized as Admin
+            if (showAdminOption || isAdminMode) {
+                FilterChip(
+                    selected = isAdminMode,
+                    onClick = onAdminToggle,
+                    label = {
+                        Text(
+                            text = if (isAdminMode) "অ্যাডমিন" else "ছাত্র মোড",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (isAdminMode) Icons.Default.AdminPanelSettings else Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    },
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .testTag("admin_role_chip")
+                )
+            }
         },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface

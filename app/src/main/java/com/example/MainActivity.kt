@@ -50,6 +50,8 @@ fun JobPrepApp(
     val liveClasses by viewModel.liveClasses.collectAsState()
     val notices by viewModel.notices.collectAsState()
     val chatMessages by viewModel.chatMessages.collectAsState()
+    val testAccessRequests by viewModel.testAccessRequests.collectAsState()
+    val testFreezeRecords by viewModel.testFreezeRecords.collectAsState()
 
     // Active exam states
     val activeMockTest by viewModel.activeMockTest.collectAsState()
@@ -78,11 +80,8 @@ fun JobPrepApp(
             onRegister = { name, phone, exam ->
                 viewModel.registerWithPhone(name, phone, exam)
             },
-            onSwitchUser = { stdId ->
-                viewModel.switchToStudent(stdId)
-            },
-            onOpenAdmin = {
-                viewModel.toggleAdminMode()
+            onAdminLogin = { phone, pass ->
+                viewModel.loginAsAdmin(phone, pass)
             },
             onContinueToApp = {
                 viewModel.navigateTo(Screen.Home)
@@ -121,6 +120,7 @@ fun JobPrepApp(
                     language = appLanguage,
                     onLanguageChange = { viewModel.setLanguage(it) },
                     isAdminMode = isAdminMode,
+                    showAdminOption = currentStudent.isAdmin || isAdminMode,
                     onAdminToggle = { viewModel.toggleAdminMode() },
                     onOpenChat = { viewModel.navigateTo(Screen.Chat) },
                     onOpenAiChat = { viewModel.navigateTo(Screen.AiChatbot) },
@@ -166,9 +166,14 @@ fun JobPrepApp(
 
                 is Screen.MockTests -> {
                     MockTestsScreen(
+                        currentStudent = currentStudent,
                         mockTests = mockTests,
                         attempts = testAttempts,
+                        isAdminMode = isAdminMode,
                         language = appLanguage,
+                        onRequestTestAccess = { testId, title ->
+                            viewModel.requestMockTestAccess(testId, title)
+                        },
                         onStartTest = { testId -> viewModel.startMockTest(testId) },
                         onViewResult = { attemptId, testId ->
                             viewModel.navigateTo(Screen.ExamResult(attemptId, testId))
@@ -187,6 +192,7 @@ fun JobPrepApp(
                             perQuestionTimeSeconds = perQuestionTimeSeconds,
                             violationStrikes = violationStrikes,
                             isViolationDialogVisible = isViolationDialogVisible,
+                            isFrozen = currentStudent.isTestFrozen,
                             language = appLanguage,
                             onLanguageChange = { newLang -> viewModel.setLanguage(newLang) },
                             onSelectAnswer = { qIdx, optIdx -> viewModel.selectAnswer(qIdx, optIdx) },
@@ -194,7 +200,8 @@ fun JobPrepApp(
                             onGoToQuestion = { qIdx -> viewModel.goToQuestion(qIdx) },
                             onReportViolation = { viewModel.reportExamViolation() },
                             onDismissViolationDialog = { viewModel.dismissViolationDialog() },
-                            onSubmitExam = { viewModel.submitExam() }
+                            onSubmitExam = { viewModel.submitExam() },
+                            onExitToHome = { viewModel.navigateTo(Screen.Home) }
                         )
                     }
                 }
@@ -283,18 +290,45 @@ fun JobPrepApp(
 
                 is Screen.Admin -> {
                     AdminPanelScreen(
+                        currentStudent = currentStudent,
                         students = allStudents,
                         pdfBooks = pdfBooks,
                         mockTests = mockTests,
+                        testAccessRequests = testAccessRequests,
+                        testFreezeRecords = testFreezeRecords,
+                        notices = notices,
                         onToggleStudentApproval = { stdId, approved ->
                             viewModel.setStudentApproval(stdId, approved)
                         },
-                        onToggleAdminRole = { stdId ->
-                            viewModel.toggleAdminRole(stdId)
+                        onApproveTestAccess = { reqId ->
+                            viewModel.approveTestAccessRequest(reqId)
+                        },
+                        onUnfreezeStudentTest = { freezeId ->
+                            viewModel.unfreezeStudentTest(freezeId)
+                        },
+                        onToggleMockTestPermission = { stdId ->
+                            viewModel.toggleMockTestPermission(stdId)
+                        },
+                        onTogglePdfPermission = { stdId ->
+                            viewModel.togglePdfPermission(stdId)
+                        },
+                        onGrantAllMockTestPermission = { grant ->
+                            viewModel.grantAllMockTestPermission(grant)
+                        },
+                        onGrantAllPdfPermission = { grant ->
+                            viewModel.grantAllPdfPermission(grant)
                         },
                         onTogglePdfLock = { pdfId -> viewModel.togglePdfLock(pdfId) },
-                        onCreateMockTest = { title, cat, dur, neg, mark, qs ->
-                            viewModel.createMockTest(title, cat, dur, neg, mark, qs)
+                        onCreateMockTest = { title, cat, dur, neg, mark, isLocked, qs ->
+                            viewModel.createMockTest(
+                                title = title,
+                                category = cat,
+                                durationMinutes = dur,
+                                negativeMarkPerWrong = neg,
+                                markPerCorrect = mark,
+                                isLockedByAdmin = isLocked,
+                                questions = qs
+                            )
                         },
                         onAddQuestionToTest = { testId, question ->
                             viewModel.addQuestionToMockTest(testId, question)
@@ -305,6 +339,9 @@ fun JobPrepApp(
                         onDeleteMockTest = { testId -> viewModel.deleteMockTest(testId) },
                         onToggleMockTestLock = { testId -> viewModel.toggleMockTestLock(testId) },
                         onAddPdfBook = { pdf -> viewModel.addPdfBook(pdf) },
+                        onAddNotice = { title, content, cat, urgent ->
+                            viewModel.addNotice(title, content, cat, urgent)
+                        },
                         onStartMockTest = { testId -> viewModel.startMockTest(testId) },
                         onBack = { viewModel.navigateBack() }
                     )
@@ -317,11 +354,8 @@ fun JobPrepApp(
                         onRegister = { name, phone, exam ->
                             viewModel.registerWithPhone(name, phone, exam)
                         },
-                        onSwitchUser = { stdId ->
-                            viewModel.switchToStudent(stdId)
-                        },
-                        onOpenAdmin = {
-                            viewModel.toggleAdminMode()
+                        onAdminLogin = { phone, pass ->
+                            viewModel.loginAsAdmin(phone, pass)
                         },
                         onContinueToApp = {
                             viewModel.navigateTo(Screen.Home)

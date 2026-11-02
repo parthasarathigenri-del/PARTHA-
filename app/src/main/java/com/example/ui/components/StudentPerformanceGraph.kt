@@ -139,129 +139,164 @@ fun StudentPerformanceGraphCard(
                 }
             }
 
-            // Canvas Graph View
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val width = size.width
-                    val height = size.height
-                    val maxScore = 100f
-                    val minScore = 0f
-
-                    // 1. Draw horizontal guide lines (0%, 25%, 50%, 75%, 100%)
-                    val gridLines = listOf(0.25f, 0.50f, 0.75f)
-                    gridLines.forEach { ratio ->
-                        val y = height * (1f - ratio)
-                        drawLine(
-                            color = Color.LightGray.copy(alpha = 0.4f),
-                            start = Offset(0f, y),
-                            end = Offset(width, y),
-                            strokeWidth = 1f,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+            if (scores.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QueryStats,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp)
                         )
-                    }
-
-                    if (scores.size < 2) return@Canvas
-
-                    val stepX = width / (scores.size - 1)
-                    val points = scores.mapIndexed { index, score ->
-                        val x = index * stepX
-                        val normalizedScore = (score.toFloat() - minScore) / (maxScore - minScore)
-                        val y = height * (1f - normalizedScore.coerceIn(0.1f, 0.95f))
-                        Offset(x, y)
-                    }
-
-                    // 2. Draw smooth filled gradient area under the line
-                    val fillPath = Path().apply {
-                        moveTo(points.first().x, points.first().y)
-                        for (i in 0 until points.size - 1) {
-                            val p0 = points[i]
-                            val p1 = points[i + 1]
-                            val cx = (p0.x + p1.x) / 2
-                            cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
-                        }
-                        lineTo(points.last().x, height)
-                        lineTo(points.first().x, height)
-                        close()
-                    }
-
-                    drawPath(
-                        path = fillPath,
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                trendColor.copy(alpha = 0.35f),
-                                trendColor.copy(alpha = 0.02f)
-                            ),
-                            startY = 0f,
-                            endY = height
+                        Text(
+                            text = "কোনো স্কোর এখনও রেকর্ড হয়নি",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
                         )
-                    )
-
-                    // 3. Draw trend stroke line
-                    val strokePath = Path().apply {
-                        moveTo(points.first().x, points.first().y)
-                        for (i in 0 until points.size - 1) {
-                            val p0 = points[i]
-                            val p1 = points[i + 1]
-                            val cx = (p0.x + p1.x) / 2
-                            cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
-                        }
-                    }
-
-                    drawPath(
-                        path = strokePath,
-                        color = trendColor,
-                        style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
-                    )
-
-                    // 4. Draw data point circles & badges
-                    points.forEach { pt ->
-                        drawCircle(
-                            color = Color.White,
-                            radius = 5.dp.toPx(),
-                            center = pt
-                        )
-                        drawCircle(
-                            color = trendColor,
-                            radius = 3.5.dp.toPx(),
-                            center = pt
+                        Text(
+                            text = "প্রথম মক টেস্ট সম্পন্ন করার পর এখানে আপনার ধারাবাহিক স্কোরের গ্রাফ ও প্রবৃদ্ধি বিশ্লেষণ প্রদর্শিত হবে।",
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-            }
+            } else {
+                // Canvas Graph View
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val width = size.width
+                        val height = size.height
+                        val maxScore = 100f
+                        val minScore = 0f
 
-            // X-axis Mock Test milestone tags
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                scores.forEachIndexed { idx, score ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "${score.toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = trendColor
+                        // 1. Draw horizontal guide lines (0%, 25%, 50%, 75%, 100%)
+                        val gridLines = listOf(0.25f, 0.50f, 0.75f)
+                        gridLines.forEach { ratio ->
+                            val y = height * (1f - ratio)
+                            drawLine(
+                                color = Color.LightGray.copy(alpha = 0.4f),
+                                start = Offset(0f, y),
+                                end = Offset(width, y),
+                                strokeWidth = 1f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                            )
+                        }
+
+                        if (scores.size < 2) return@Canvas
+
+                        val stepX = width / (scores.size - 1)
+                        val points = scores.mapIndexed { index, score ->
+                            val x = index * stepX
+                            val normalizedScore = (score.toFloat() - minScore) / (maxScore - minScore)
+                            val y = height * (1f - normalizedScore.coerceIn(0.1f, 0.95f))
+                            Offset(x, y)
+                        }
+
+                        // 2. Draw smooth filled gradient area under the line
+                        val fillPath = Path().apply {
+                            moveTo(points.first().x, points.first().y)
+                            for (i in 0 until points.size - 1) {
+                                val p0 = points[i]
+                                val p1 = points[i + 1]
+                                val cx = (p0.x + p1.x) / 2
+                                cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                            }
+                            lineTo(points.last().x, height)
+                            lineTo(points.first().x, height)
+                            close()
+                        }
+
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    trendColor.copy(alpha = 0.35f),
+                                    trendColor.copy(alpha = 0.02f)
+                                ),
+                                startY = 0f,
+                                endY = height
+                            )
                         )
-                        Text(
-                            text = "টেস্ট ${idx + 1}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 9.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                        // 3. Draw trend stroke line
+                        val strokePath = Path().apply {
+                            moveTo(points.first().x, points.first().y)
+                            for (i in 0 until points.size - 1) {
+                                val p0 = points[i]
+                                val p1 = points[i + 1]
+                                val cx = (p0.x + p1.x) / 2
+                                cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                            }
+                        }
+
+                        drawPath(
+                            path = strokePath,
+                            color = trendColor,
+                            style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
                         )
+
+                        // 4. Draw data point circles & badges
+                        points.forEach { pt ->
+                            drawCircle(
+                                color = Color.White,
+                                radius = 5.dp.toPx(),
+                                center = pt
+                            )
+                            drawCircle(
+                                color = trendColor,
+                                radius = 3.5.dp.toPx(),
+                                center = pt
+                            )
+                        }
+                    }
+                }
+
+                // X-axis Mock Test milestone tags
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    scores.forEachIndexed { idx, score ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "${score.toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = trendColor
+                            )
+                            Text(
+                                text = "টেস্ট ${idx + 1}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
 
             // Metric boxes
+            val startScore = scores.firstOrNull()?.toInt() ?: 0
+            val currentScore = scores.lastOrNull()?.toInt() ?: 0
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -273,7 +308,7 @@ fun StudentPerformanceGraphCard(
                 ) {
                     Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("শুরুতে স্কোর", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("${scores.first().toInt()}%", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(if (scores.isEmpty()) "—" else "$startScore%", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -284,7 +319,7 @@ fun StudentPerformanceGraphCard(
                 ) {
                     Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("বর্তমান স্কোর", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("${scores.last().toInt()}%", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = trendColor)
+                        Text(if (scores.isEmpty()) "—" else "$currentScore%", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = trendColor)
                     }
                 }
 
@@ -296,7 +331,7 @@ fun StudentPerformanceGraphCard(
                     Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("মোট পরিবর্তন", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            text = if (percentChange >= 0) "+$percentChange%" else "$percentChange%",
+                            text = if (scores.isEmpty()) "০%" else if (percentChange >= 0) "+$percentChange%" else "$percentChange%",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = trendColor

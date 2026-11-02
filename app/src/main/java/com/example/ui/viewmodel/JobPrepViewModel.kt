@@ -49,6 +49,8 @@ class JobPrepViewModel(
     val examRoutines = repository.examRoutines
     val mockTests = repository.mockTests
     val testAttempts = repository.testAttempts
+    val testAccessRequests = repository.testAccessRequests
+    val testFreezeRecords = repository.testFreezeRecords
     val pdfBooks = repository.pdfBooks
     val liveClasses = repository.liveClasses
     val notices = repository.notices
@@ -142,19 +144,7 @@ class JobPrepViewModel(
         repository.togglePdfLock(pdfId)
     }
 
-    // Start a Mock Test (with Lockdown protection)
-    fun startMockTest(testId: String) {
-        val test = mockTests.value.find { it.id == testId } ?: return
-        _activeMockTest.value = test
-        _currentQuestionIndex.value = 0
-        _selectedAnswers.value = emptyMap()
-        _perQuestionTimeSeconds.value = emptyMap()
-        _examViolationStrikes.value = 0
-        _violationWarningDialogVisible.value = false
-        totalExamDurationSeconds = test.durationMinutes * 60
-        _timeRemainingSeconds.value = totalExamDurationSeconds
-        timeSpentSeconds = 0
-
+    private fun startExamTimer(initialSeconds: Int) {
         examTimerJob?.cancel()
         examTimerJob = viewModelScope.launch {
             while (_timeRemainingSeconds.value > 0) {
@@ -171,7 +161,22 @@ class JobPrepViewModel(
             // Auto submit when time expires!
             submitExam(isAutoSubmit = true)
         }
+    }
 
+    // Start a Mock Test (with Lockdown protection)
+    fun startMockTest(testId: String) {
+        val test = mockTests.value.find { it.id == testId } ?: return
+        _activeMockTest.value = test
+        _currentQuestionIndex.value = 0
+        _selectedAnswers.value = emptyMap()
+        _perQuestionTimeSeconds.value = emptyMap()
+        _examViolationStrikes.value = 0
+        _violationWarningDialogVisible.value = false
+        totalExamDurationSeconds = test.durationMinutes * 60
+        _timeRemainingSeconds.value = totalExamDurationSeconds
+        timeSpentSeconds = 0
+
+        startExamTimer(totalExamDurationSeconds)
         navigateTo(Screen.ActiveExam(testId))
     }
 
@@ -195,15 +200,24 @@ class JobPrepViewModel(
     }
 
     // Protected Lockdown Detection: Called when user minimizes or switches away during exam
+    // Protected Lockdown Detection: Strike 1 & 2 warn, Strike 3 Freezes test for Admin unfreeze
     fun reportExamViolation() {
         if (_currentScreen.value !is Screen.ActiveExam) return
-        val currentStrikes = _examViolationStrikes.value + 1
-        _examViolationStrikes.value = currentStrikes
-        _violationWarningDialogVisible.value = true
+        val test = _activeMockTest.value ?: return
+        val currentStrikes = _examViolationStrikes.value
+        val updatedStrikes = repository.reportViolationStrike(
+            mockTestId = test.id,
+            mockTestTitle = test.getTitle(appLanguage.value),
+            currentStrikes = currentStrikes
+        )
+        _examViolationStrikes.value = updatedStrikes
 
-        if (currentStrikes >= 3) {
-            // Force submission due to multiple cheating / tab-out violations!
-            submitExam(isForceDisqualified = true)
+        if (updatedStrikes >= 3) {
+            // Exam frozen! Pause timer and hide warning dialog, frozen screen will take over
+            examTimerJob?.cancel()
+            _violationWarningDialogVisible.value = false
+        } else {
+            _violationWarningDialogVisible.value = true
         }
     }
 
@@ -226,7 +240,11 @@ class JobPrepViewModel(
         _currentScreen.value = Screen.ExamResult(attempt.attemptId, test.id)
     }
 
-    // WhatsApp-like Phone Registration & Admin Approval
+    // Role-Based Login: Admin (8902720907 / 258789) vs Student Phone Login
+    fun isAdminPhoneNumber(phone: String): Boolean = repository.isAdminPhoneNumber(phone)
+
+    fun loginAsAdmin(phone: String, password: String): Boolean = repository.loginAsAdmin(phone, password)
+
     fun registerWithPhone(name: String, phone: String, targetExam: String) {
         repository.registerStudentWithPhone(name, phone, targetExam)
     }
@@ -237,6 +255,29 @@ class JobPrepViewModel(
 
     fun rejectStudent(studentId: String) {
         repository.rejectStudent(studentId)
+    }
+
+    // First-Time Test Access Permission Request
+    fun requestMockTestAccess(mockTestId: String, mockTestTitle: String) {
+        repository.requestMockTestAccess(mockTestId, mockTestTitle)
+    }
+
+    fun approveTestAccessRequest(requestId: String) {
+        repository.approveTestAccessRequest(requestId)
+    }
+
+    fun canStudentAccessTest(mockTestId: String): Boolean {
+        return repository.canStudentAccessTest(currentStudent.value, mockTestId)
+    }
+
+    // 3-Strike Unfreeze
+    fun unfreezeStudentTest(freezeRecordId: String) {
+        repository.unfreezeStudentTest(freezeRecordId)
+        _examViolationStrikes.value = 0
+        // Resume timer if in active exam
+        if (_currentScreen.value is Screen.ActiveExam && _timeRemainingSeconds.value > 0) {
+            startExamTimer(_timeRemainingSeconds.value)
+        }
     }
 
     // Admin Profile & Registration
@@ -261,7 +302,6 @@ class JobPrepViewModel(
         repository.grantAllPdfPermission(grant)
     }
 
-    // WhatsApp Group Admin style: Individually make any student Admin or dismiss Admin
     fun toggleAdminRole(studentId: String) {
         repository.toggleAdminRole(studentId)
     }
@@ -273,6 +313,20 @@ class JobPrepViewModel(
     fun addQuestionsBatchToMockTest(testId: String, questions: List<MockQuestion>) {
         repository.addQuestionsBatchToMockTest(testId, questions)
     }
+
+    fun addNotice(title: String, content: String, category: String = "ইনস্টিটিউট নোটিশ", isUrgent: Boolean = false) {
+        val notice = InstituteNotice(
+            id = "not_${System.currentTimeMillis()}",
+            title = title,
+            dateString = "আজ",
+            category = category,
+            content = content,
+            isUrgent = isUrgent
+        )
+        repository.addNotice(notice)
+    }
+
+    fun getLeaderboard(): List<LeaderboardEntry> = repository.getLeaderboard()
 
     fun openReviewMode(attemptId: String, testId: String) {
         _currentScreen.value = Screen.ExamReview(attemptId, testId)
@@ -343,6 +397,7 @@ class JobPrepViewModel(
         durationMinutes: Int,
         negativeMarkPerWrong: Double = 0.25,
         markPerCorrect: Double = 1.0,
+        isLockedByAdmin: Boolean = true,
         questions: List<MockQuestion> = emptyList()
     ): MockTest {
         return repository.createMockTest(
@@ -351,6 +406,7 @@ class JobPrepViewModel(
             durationMinutes = durationMinutes,
             negativeMarkPerWrong = negativeMarkPerWrong,
             markPerCorrect = markPerCorrect,
+            isLockedByAdmin = isLockedByAdmin,
             questions = questions
         )
     }

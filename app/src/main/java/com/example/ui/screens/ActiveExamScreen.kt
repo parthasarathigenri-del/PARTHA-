@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.example.data.model.MockTest
 import com.example.ui.theme.*
 
@@ -45,6 +48,7 @@ fun ActiveExamScreen(
     perQuestionTimeSeconds: Map<Int, Int> = emptyMap(),
     violationStrikes: Int,
     isViolationDialogVisible: Boolean,
+    isFrozen: Boolean = false,
     language: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.BENGALI,
     onLanguageChange: (com.example.data.model.AppLanguage) -> Unit = {},
     onSelectAnswer: (Int, Int) -> Unit,
@@ -52,7 +56,8 @@ fun ActiveExamScreen(
     onGoToQuestion: (Int) -> Unit,
     onReportViolation: () -> Unit,
     onDismissViolationDialog: () -> Unit,
-    onSubmitExam: () -> Unit
+    onSubmitExam: () -> Unit,
+    onExitToHome: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -60,12 +65,21 @@ fun ActiveExamScreen(
     var currentExamLanguage by remember(language) { mutableStateOf(language) }
     var showLanguageDropdown by remember { mutableStateOf(false) }
 
-    // 1. Anti-cheating Window Security: Set FLAG_SECURE during active test to prevent screen recording/screenshots
+    // 1. Anti-cheating Window Security: Set FLAG_SECURE and Immersive Full-Screen View
     DisposableEffect(Unit) {
         val window = (context as? Activity)?.window
         window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if (window != null) {
+            val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+            insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        }
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if (window != null) {
+                val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
         }
     }
 
@@ -81,6 +95,123 @@ fun ActiveExamScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+
+    // 3-Strike Freeze & Lock Screen
+    if (violationStrikes >= 3 || isFrozen) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("exam_frozen_lock_card")
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(CrimsonRed.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Exam Frozen",
+                            tint = CrimsonRed,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "🚨 পরীক্ষা সাময়িকভাবে ফ্রিজ ও লক করা হয়েছে",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = CrimsonRed,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = CrimsonRed.copy(alpha = 0.08f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CrimsonRed.copy(alpha = 0.3f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "৩-স্ট্রাইক অ্যান্টি-চিটিং সুরক্ষা বিধি:",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = CrimsonRed
+                            )
+                            Text(
+                                text = "• স্ট্রাইক ১ ও ২: স্বয়ংক্রিয় সতর্কবার্তা জারি করা হয়েছিল।\n• স্ট্রাইক ৩: অ্যাপ ছেড়ে যাওয়া বা উইন্ডো পরিবর্তন করায় এই পরীক্ষাটি ফ্রিজ করা হয়েছে।",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = AccentAmber.copy(alpha = 0.12f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.5.dp,
+                                color = AccentAmber
+                            )
+                            Column {
+                                Text(
+                                    text = "অ্যাডমিন আনফ্রিজ অনুমোদন: অপেক্ষমাণ",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AccentAmber
+                                )
+                                Text(
+                                    text = "ইনস্টিটিউট অ্যাডমিন (8902720907) তাঁর প্যানেল থেকে 'Approve / Unfreeze' করলেই পরীক্ষাটি পুনরায় চালু হবে।",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = onExitToHome,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("frozen_exam_exit_home_btn")
+                    ) {
+                        Icon(imageVector = Icons.Default.Home, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("ড্যাশবোর্ডে ফিরে যান (পরে চালু হবে)", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        return
     }
 
     // Intercept back button during exam to prevent accidental exit

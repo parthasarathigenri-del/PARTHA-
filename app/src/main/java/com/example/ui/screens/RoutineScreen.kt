@@ -38,7 +38,7 @@ fun RoutineScreen(
 
     val filteredRoutines = remember(selectedFilter, routines) {
         if (selectedFilter == "সকল (All)") routines
-        else routines.filter { it.targetExam.contains(selectedFilter.split(" ").first()) }
+        else routines.filter { it.targetExam.contains(selectedFilter.split(" ").firstOrNull() ?: "") }
     }
 
     LazyColumn(

@@ -8,6 +8,11 @@ import kotlinx.coroutines.flow.update
 
 class JobPrepRepository {
 
+    companion object {
+        const val ADMIN_PHONE = "8902720907"
+        const val ADMIN_PASSWORD = "258789"
+    }
+
     // Language state (Bengali, English, Hindi)
     private val _appLanguage = MutableStateFlow(AppLanguage.BENGALI)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
@@ -18,44 +23,33 @@ class JobPrepRepository {
 
     private val _currentStudent = MutableStateFlow(
         Student(
-            id = "admin_master",
-            name = "ইনস্টিটিউট অ্যাডমিন (আপনি)",
-            rollNo = "ADM-01",
-            targetExam = "অ্যাডমিন কন্ট্রোল",
-            phone = "+91 98765 43210",
-            isApproved = true,
-            isAdmin = true,
-            canAccessMockTests = true,
-            canAccessPdfs = true,
+            id = "guest_student",
+            name = "নতুন শিক্ষার্থী",
+            rollNo = "CP-101",
+            targetExam = "চাকরির প্রস্তুতি",
+            phone = "",
+            isApproved = false,
+            isAdmin = false,
+            canAccessMockTests = false,
+            canAccessPdfs = false,
             registrationDate = "আজ",
             activeTimeSeconds = 0L,
-            batch = "প্রধান অ্যাডমিন প্যানেল",
-            scoresHistory = emptyList()
+            batch = "কম্পিটিটিভ পাঠশালা"
         )
     )
     val currentStudent: StateFlow<Student> = _currentStudent.asStateFlow()
 
     // Institute registered students list for Admin
-    private val _allStudents = MutableStateFlow<List<Student>>(
-        listOf(
-            Student(
-                id = "admin_master",
-                name = "ইনস্টিটিউট অ্যাডমিন (আপনি)",
-                rollNo = "ADM-01",
-                targetExam = "অ্যাডমিন কন্ট্রোল",
-                phone = "+91 98765 43210",
-                isApproved = true,
-                isAdmin = true,
-                canAccessMockTests = true,
-                canAccessPdfs = true,
-                registrationDate = "আজ",
-                activeTimeSeconds = 0L,
-                batch = "প্রধান অ্যাডমিন প্যানেল",
-                scoresHistory = emptyList()
-            )
-        )
-    )
+    private val _allStudents = MutableStateFlow<List<Student>>(emptyList())
     val allStudents: StateFlow<List<Student>> = _allStudents.asStateFlow()
+
+    // First-Time Test Access Permission Requests
+    private val _testAccessRequests = MutableStateFlow<List<TestAccessRequest>>(emptyList())
+    val testAccessRequests: StateFlow<List<TestAccessRequest>> = _testAccessRequests.asStateFlow()
+
+    // Anti-Cheating 3-Strike Frozen Test Records
+    private val _testFreezeRecords = MutableStateFlow<List<TestFreezeRecord>>(emptyList())
+    val testFreezeRecords: StateFlow<List<TestFreezeRecord>> = _testFreezeRecords.asStateFlow()
 
     // Exam Routine (Empty by default - user creates their own)
     private val _examRoutines = MutableStateFlow<List<ExamRoutine>>(emptyList())
@@ -82,10 +76,10 @@ class JobPrepRepository {
         listOf(
             InstituteNotice(
                 id = "not_1",
-                title = "স্বাগতম আপনার নিজস্ব মক টেস্ট প্ল্যাটফর্মে",
+                title = "স্বাগতম কম্পিটিটিভ পাঠশালা প্ল্যাটফর্মে",
                 dateString = "আজ",
                 category = "ইনস্টিটিউট সূচনা",
-                content = "এই অ্যাপটি সম্পূর্ণ আপনার নিজস্ব। অ্যাডমিন প্যানেল থেকে আপনি সরাসরি প্রশ্ন টাইপ করে অথবা পিডিএফ থেকে এক্সট্র্যাক্ট করে মক টেস্ট তৈরি করতে পারবেন। ছাত্রছাত্রীরা ফোন নম্বর দিয়ে রেজিস্ট্রেশন করলে আপনার কাছে রিকোয়েস্ট আসবে এবং আপনি তাদের অনুমোদন দিতে পারবেন।",
+                content = "এই অ্যাপটি আপনার নিজস্ব। অ্যাডমিন (8902720907) পাসওয়ার্ড (258789) দিয়ে প্রবেশ করে মক টেস্ট তৈরি ও পিডিএফ আপলোড করতে পারবেন। ছাত্রছাত্রীরা প্রথমবার মক টেস্ট দিতে চাইলে অ্যাডমিনের অনুমতি প্রয়োজন হবে।",
                 isUrgent = false
             )
         )
@@ -108,13 +102,48 @@ class JobPrepRepository {
         _isAdminMode.update { !it }
     }
 
+    fun isAdminPhoneNumber(phone: String): Boolean {
+        val clean = phone.filter { it.isDigit() }
+        return clean == ADMIN_PHONE || clean.endsWith(ADMIN_PHONE)
+    }
+
+    fun loginAsAdmin(phone: String, password: String): Boolean {
+        val cleanPhone = phone.filter { it.isDigit() }
+        val isPhoneMatch = cleanPhone == ADMIN_PHONE || cleanPhone.endsWith(ADMIN_PHONE)
+        val isPasswordMatch = password.trim() == ADMIN_PASSWORD
+        if (isPhoneMatch && isPasswordMatch) {
+            val admin = Student(
+                id = "admin_master",
+                name = "ইনস্টিটিউট প্রধান / অ্যাডমিন",
+                rollNo = "ADM-8902",
+                targetExam = "অ্যাডমিন কন্ট্রোল সেন্টার",
+                phone = "+91 $ADMIN_PHONE",
+                isApproved = true,
+                isAdmin = true,
+                canAccessMockTests = true,
+                canAccessPdfs = true,
+                registrationDate = "যাচাইকৃত প্রধান অ্যাডমিন",
+                activeTimeSeconds = 0L,
+                batch = "প্রধান অ্যাডমিন প্যানেল",
+                scoresHistory = emptyList()
+            )
+            _currentStudent.value = admin
+            _isAdminMode.value = true
+            _allStudents.update { list ->
+                listOf(admin) + list.filterNot { it.id == "admin_master" }
+            }
+            return true
+        }
+        return false
+    }
+
     fun registerOrUpdateAdmin(name: String, phone: String) {
-        val adminName = name.ifBlank { "ইনস্টিটিউট অ্যাডমিন" }
-        val adminPhone = phone.ifBlank { "+91 98765 43210" }
+        val adminName = name.ifBlank { "ইনস্টিটিউট প্রধান (অ্যাডমিন)" }
+        val adminPhone = phone.ifBlank { "+91 $ADMIN_PHONE" }
         val updatedAdmin = Student(
             id = "admin_master",
             name = adminName,
-            rollNo = "ADM-01",
+            rollNo = "ADM-8902",
             targetExam = "ইনস্টিটিউট অ্যাডমিন প্যানেল",
             phone = adminPhone,
             isApproved = true,
@@ -142,8 +171,10 @@ class JobPrepRepository {
             phone = phone,
             isApproved = false, // Admin must approve!
             isAdmin = false,
-            canAccessMockTests = false, // Admin grants permission!
-            canAccessPdfs = false,      // Admin grants permission!
+            canAccessMockTests = false,
+            canAccessPdfs = false,
+            approvedTestIds = emptyList(),
+            completedTestIds = emptyList(),
             registrationDate = "আজ নতুন রেজিস্ট্রেশন",
             activeTimeSeconds = 0L,
             batch = "কম্পিটিটিভ পাঠশালা"
@@ -170,6 +201,99 @@ class JobPrepRepository {
         _allStudents.update { list -> list.filterNot { it.id == studentId } }
         if (_currentStudent.value.id == studentId) {
             _allStudents.value.firstOrNull()?.let { _currentStudent.value = it }
+        }
+    }
+
+    // First-Time Test Access Permission Request
+    fun requestMockTestAccess(mockTestId: String, mockTestTitle: String) {
+        val student = _currentStudent.value
+        val existing = _testAccessRequests.value.find { it.studentId == student.id && it.mockTestId == mockTestId }
+        if (existing == null) {
+            val req = TestAccessRequest(
+                id = "req_${System.currentTimeMillis()}",
+                studentId = student.id,
+                studentName = student.name,
+                studentPhone = student.phone,
+                mockTestId = mockTestId,
+                mockTestTitle = mockTestTitle,
+                requestedAt = "এখনই আবেদন করা হয়েছে",
+                isApproved = false
+            )
+            _testAccessRequests.update { listOf(req) + it }
+        }
+    }
+
+    fun approveTestAccessRequest(requestId: String) {
+        val req = _testAccessRequests.value.find { it.id == requestId } ?: return
+        _testAccessRequests.update { list ->
+            list.map { if (it.id == requestId) it.copy(isApproved = true) else it }
+        }
+        _allStudents.update { list ->
+            list.map { st ->
+                if (st.id == req.studentId) {
+                    st.copy(approvedTestIds = (st.approvedTestIds + req.mockTestId).distinct())
+                } else st
+            }
+        }
+        if (_currentStudent.value.id == req.studentId) {
+            _currentStudent.update {
+                it.copy(approvedTestIds = (it.approvedTestIds + req.mockTestId).distinct())
+            }
+        }
+    }
+
+    fun canStudentAccessTest(student: Student, mockTestId: String): Boolean {
+        if (student.isAdmin || _isAdminMode.value) return true
+        if (student.completedTestIds.contains(mockTestId)) return true
+        return student.approvedTestIds.contains(mockTestId)
+    }
+
+    // 3-Strike Anti-Cheating & Admin Freeze
+    fun reportViolationStrike(mockTestId: String, mockTestTitle: String, currentStrikes: Int): Int {
+        val newStrikes = currentStrikes + 1
+        if (newStrikes >= 3) {
+            val student = _currentStudent.value
+            _currentStudent.update {
+                it.copy(
+                    isTestFrozen = true,
+                    frozenTestId = mockTestId,
+                    freezeReason = "৩ বার নিয়ম লঙ্ঘন (অ্যাপ/উইন্ডো পরিবর্তন)"
+                )
+            }
+            val freezeRecord = TestFreezeRecord(
+                id = "freeze_${System.currentTimeMillis()}",
+                studentId = student.id,
+                studentName = student.name,
+                studentPhone = student.phone,
+                mockTestId = mockTestId,
+                mockTestTitle = mockTestTitle,
+                strikeCount = 3,
+                frozenAt = "এখনই ফ্রোজেন",
+                isUnfrozen = false
+            )
+            _testFreezeRecords.update {
+                listOf(freezeRecord) + it.filterNot { rec -> rec.studentId == student.id && rec.mockTestId == mockTestId }
+            }
+        }
+        return newStrikes
+    }
+
+    fun unfreezeStudentTest(freezeRecordId: String) {
+        val rec = _testFreezeRecords.value.find { it.id == freezeRecordId } ?: return
+        _testFreezeRecords.update { list ->
+            list.map { if (it.id == freezeRecordId) it.copy(isUnfrozen = true) else it }
+        }
+        _allStudents.update { list ->
+            list.map { st ->
+                if (st.id == rec.studentId) {
+                    st.copy(isTestFrozen = false, frozenTestId = null, freezeReason = "")
+                } else st
+            }
+        }
+        if (_currentStudent.value.id == rec.studentId) {
+            _currentStudent.update {
+                it.copy(isTestFrozen = false, frozenTestId = null, freezeReason = "")
+            }
         }
     }
 
@@ -223,6 +347,29 @@ class JobPrepRepository {
         if (!_currentStudent.value.isAdmin) {
             _currentStudent.update { it.copy(canAccessPdfs = grant) }
         }
+    }
+
+    fun getLeaderboard(): List<LeaderboardEntry> {
+        val attempts = _testAttempts.value
+        if (attempts.isEmpty()) return emptyList()
+        return attempts
+            .sortedByDescending { it.score }
+            .mapIndexed { idx, att ->
+                val total = (att.correctCount + att.incorrectCount + att.unattemptedCount).coerceAtLeast(1)
+                val accuracy = Math.round((att.correctCount.toDouble() / total) * 1000.0) / 10.0
+                val st = _allStudents.value.find { it.id == att.studentId }
+                LeaderboardEntry(
+                    rank = idx + 1,
+                    studentName = att.studentName,
+                    rollNo = st?.rollNo ?: "CP-${100 + idx}",
+                    targetExam = st?.targetExam ?: "চাকরির প্রস্তুতি",
+                    score = att.score,
+                    totalMarks = (total * 1.0).toInt(),
+                    accuracyPercent = accuracy,
+                    timeSpentSeconds = att.timeSpentSeconds,
+                    mockTestTitle = att.mockTestTitle
+                )
+            }
     }
 
     // WhatsApp Group Admin style: Individually make any student Admin or dismiss Admin
@@ -325,6 +472,24 @@ class JobPrepRepository {
         )
 
         _testAttempts.update { listOf(attempt) + it }
+        _currentStudent.update {
+            it.copy(
+                completedTestIds = (it.completedTestIds + mockTest.id).distinct(),
+                isTestFrozen = false,
+                frozenTestId = null
+            )
+        }
+        _allStudents.update { list ->
+            list.map { st ->
+                if (st.id == _currentStudent.value.id) {
+                    st.copy(
+                        completedTestIds = (st.completedTestIds + mockTest.id).distinct(),
+                        isTestFrozen = false,
+                        frozenTestId = null
+                    )
+                } else st
+            }
+        }
         return attempt
     }
 
@@ -373,6 +538,7 @@ class JobPrepRepository {
         durationMinutes: Int,
         negativeMarkPerWrong: Double = 0.25,
         markPerCorrect: Double = 1.0,
+        isLockedByAdmin: Boolean = true,
         questions: List<MockQuestion> = emptyList()
     ): MockTest {
         val totalMarks = if (questions.isNotEmpty()) (questions.size * markPerCorrect).toInt() else 25
@@ -389,7 +555,7 @@ class JobPrepRepository {
             totalMarks = totalMarks,
             markPerCorrect = markPerCorrect,
             negativeMarkPerWrong = negativeMarkPerWrong,
-            isLockedByAdmin = false,
+            isLockedByAdmin = isLockedByAdmin,
             questions = questions
         )
         _mockTests.update { listOf(newTest) + it }
